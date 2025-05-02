@@ -1,3 +1,4 @@
+#include <IconsKenney.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <capo/format.hpp>
@@ -41,6 +42,7 @@ void Frontend::draw() {
 	auto const* active_track = m_state->active_track();
 	auto const* title = active_track != nullptr ? active_track->name.c_str() : "[none]";
 	ImGui::TextUnformatted(title);
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
 	draw_controls(active_track);
 	draw_playlist();
 }
@@ -59,7 +61,7 @@ void Frontend::draw_controls(Track const* active_track) {
 void Frontend::draw_buttons(Track const* active_track) {
 	ImGui::SetNextItemWidth(50.0f);
 	if (active_track == nullptr) { ImGui::BeginDisabled(); }
-	auto const* play_str = m_state->is_playing ? "Pause" : "Play";
+	auto const* play_str = m_state->is_playing ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT;
 	if (ImGui::ButtonEx(play_str, {50.0f, 50.0f})) {
 		if (m_state->is_playing) {
 			m_state->on_pause.dispatch();
@@ -121,11 +123,21 @@ void Frontend::draw_menu_bar() {
 }
 
 void Frontend::draw_playlist() {
+	ImGui::Separator();
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
+	ImGui::TextUnformatted(ICON_KI_LIST);
 	ImGui::BeginChild("playlist", {}, ImGuiChildFlags_Borders);
 	for (auto const [index, track] : std::views::enumerate(m_state->playlist)) {
+		auto const is_now_playing = m_state->now_playing && *m_state->now_playing == index;
+		if (is_now_playing) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 1.0f, 0.0f, 1.0f}); }
 		auto const is_selected = m_selected == index;
 		if (ImGui::Selectable(track.name.c_str(), m_selected == index)) {
 			m_selected = is_selected ? -1 : std::int32_t(index);
+		}
+		if (is_now_playing) { ImGui::PopStyleColor(); }
+		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+			m_state->now_playing = index;
+			m_state->on_track_select.dispatch();
 		}
 	}
 	ImGui::EndChild();

@@ -16,6 +16,7 @@ class Backend {
 	auto check_track(Track& track) -> bool;
 
 	void play_next();
+	void try_play_sequential();
 	auto play_track(Track& track) -> bool;
 
 	State* m_state{};

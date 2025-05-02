@@ -12,3 +12,10 @@ add_subdirectory(src/capo_lite)
 
 message(STATUS "[gvdi]")
 add_subdirectory(src/gvdi)
+
+message(STATUS "[icons-kenny]")
+add_subdirectory(src/icons_kenny)
+
+if(RIFF_BUILD_EMBEDDER)
+  add_subdirectory(src/embedder)
+endif()

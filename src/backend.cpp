@@ -26,6 +26,7 @@ Backend::Backend(State* state) : m_state(state) {
 		m_source->stop();
 		m_state->is_playing = false;
 	});
+	m_state->on_track_select.connect([this] { try_play_sequential(); });
 	m_state->gain_changed.connect([set_gain] { set_gain(); });
 	m_state->balance_changed.connect([set_pan] { set_pan(); });
 
@@ -61,7 +62,8 @@ void Backend::on_drop(std::span<char const* const> paths) {
 }
 
 void Backend::update() {
-	if (m_state->is_playing && !m_source->is_playing()) { play_next(); }
+	auto const track_ended = m_state->is_playing && !m_source->is_playing();
+	if (track_ended) { play_next(); }
 	if (m_source->is_bound()) { m_state->cursor = m_source->get_cursor(); }
 	m_state->gain = m_source->get_gain();
 	m_state->is_playing = m_source->is_playing();
@@ -85,6 +87,12 @@ void Backend::play_next() {
 	} else {
 		++*m_state->now_playing;
 	}
+	try_play_sequential();
+}
+
+void Backend::try_play_sequential() {
+	if (!m_state->now_playing) { return; }
+
 	for (; *m_state->now_playing < m_state->playlist.size(); ++*m_state->now_playing) {
 		auto& track = m_state->playlist.at(*m_state->now_playing);
 		if (play_track(track)) {

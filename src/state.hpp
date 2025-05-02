@@ -42,5 +42,6 @@ struct State {
 	Signal on_pause{};
 	Signal on_seek{};
 	Signal on_quit{};
+	Signal on_track_select{};
 };
 } // namespace riff

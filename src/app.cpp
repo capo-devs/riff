@@ -1,15 +1,38 @@
+#include <IconsKenney.h>
 #include <app.hpp>
 #include <build_version.hpp>
-#include <capo/format.hpp>
+#include <embedded.hpp>
 #include <klib/args/parse.hpp>
 #include <klib/version_str.hpp>
 #include <log.hpp>
 #include <cstdlib>
-#include <print>
 
 namespace riff {
 namespace {
 [[nodiscard]] auto self(GLFWwindow* window) -> App& { return *static_cast<App*>(glfwGetWindowUserPointer(window)); }
+
+struct ImFontLoader {
+	auto load(std::span<std::byte const> bytes, float const size, ImWchar const* glyph_ranges = {}) {
+		auto config = ImFontConfig{};
+		config.FontDataOwnedByAtlas = false;
+		config.MergeMode = m_merge;
+		m_merge = true;
+		if (glyph_ranges == nullptr) { glyph_ranges = io.Fonts->GetGlyphRangesDefault(); }
+		auto* data = const_cast<std::byte*>(bytes.data()); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+		auto const data_size = int(bytes.size());
+		return io.Fonts->AddFontFromMemoryTTF(data, data_size, size, &config, glyph_ranges) != nullptr;
+	}
+
+	void load_default() {
+		io.Fonts->AddFontDefault();
+		m_merge = true;
+	}
+
+	ImGuiIO& io{ImGui::GetIO()};
+
+  private:
+	bool m_merge{false};
+};
 } // namespace
 
 auto App::run(int const argc, char const* const* argv) -> int {
@@ -25,6 +48,7 @@ auto App::run(int const argc, char const* const* argv) -> int {
 
 	m_backend.emplace(&m_state);
 	create_context();
+	setup_imgui();
 	m_frontend.emplace(&m_state);
 
 	while (m_context->next_frame()) {
@@ -38,13 +62,32 @@ auto App::run(int const argc, char const* const* argv) -> int {
 }
 
 void App::create_context() {
-	auto window = gvdi::Context::create_window({500.0f, 250.0f}, "riff");
+	auto window = gvdi::Context::create_window({500.0f, 350.0f}, "riff");
 	if (!window) { throw std::runtime_error{"Failed to create Window"}; }
 
 	glfwSetWindowUserPointer(window.get(), this);
 	install_callbacks(window.get());
 
 	m_context.emplace(std::move(window));
+}
+
+void App::setup_imgui() {
+	auto font_loader = ImFontLoader{};
+	font_loader.io.Fonts->ClearFonts();
+	if (!font_loader.load(rounded_elegance_bytes(), 14.0f)) {
+		log.warn("Failed to load RoundedElegance.ttf");
+		font_loader.load_default();
+	}
+	static constexpr auto glyph_ranges_v = std::array<ImWchar, 3>{ICON_MIN_KI, ICON_MAX_KI, 0};
+	if (!font_loader.load(kenny_icon_bytes(), 18.0f, glyph_ranges_v.data())) {
+		log.error("Failed to load KennyIcons.ttf");
+	}
+	m_context->rebuild_imgui_fonts();
+
+	static constexpr auto rounding_v = 5.0f;
+	auto& style = ImGui::GetStyle();
+	style.FrameRounding = style.PopupRounding = style.TabRounding = style.ScrollbarRounding = style.ChildRounding =
+		rounding_v;
 }
 
 void App::draw_frontend() {

@@ -12,6 +12,7 @@ class App {
 
   private:
 	void create_context();
+	void setup_imgui();
 
 	void draw_frontend();
 
