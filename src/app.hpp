@@ -23,8 +23,12 @@ class App {
 
 	template <typename F>
 	auto cycle(F get_track) -> bool;
+	template <typename Pred, typename F>
+	auto cycle(Pred pred, F get_track) -> bool;
+
 	void on_next();
 	void on_prev();
+	void advance();
 
 	static void install_callbacks(GLFWwindow* window);
 

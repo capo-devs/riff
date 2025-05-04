@@ -60,7 +60,7 @@ void App::create_player() {
 }
 
 void App::create_context() {
-	auto const title = std::format("riff v{}", klib::to_string(build_version_v));
+	auto const title = std::format("riff {}", klib::to_string(build_version_v));
 	auto window = gvdi::Context::create_window({500.0f, 350.0f}, title.c_str());
 	if (!window) { throw std::runtime_error{"Failed to create Window"}; }
 
@@ -96,11 +96,6 @@ void App::update() {
 	static constexpr auto flags_v =
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 	if (ImGui::Begin("main", nullptr, flags_v)) {
-		if (m_playing && m_player->at_end()) {
-			// TODO: don't wrap if not repeat all
-			if (cycle([this] { return m_playlist.cycle_next(); })) { m_player->play(); }
-		}
-		m_playing = m_player->is_playing();
 		update_player();
 		ImGui::Separator();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
@@ -110,6 +105,9 @@ void App::update() {
 }
 
 void App::update_player() {
+	if (m_playing && m_player->at_end()) { advance(); }
+	m_playing = m_player->is_playing();
+
 	auto const player_action = m_player->update();
 	switch (player_action) {
 	case Player::Action::None: break;
@@ -142,13 +140,28 @@ void App::update_playlist() {
 
 template <typename F>
 auto App::cycle(F get_track) -> bool {
-	while (m_playlist.has_playable_track()) {
+	return cycle([this] { return m_playlist.has_playable_track(); }, get_track);
+}
+
+template <typename Pred, typename F>
+auto App::cycle(Pred pred, F get_track) -> bool {
+	while (pred()) {
 		auto* track = get_track();
 		if (track == nullptr) { return false; }
 		if (m_player->load_track(*track)) { return true; }
 		log.error("failed to load file: {}", track->path);
 	}
 	return false;
+}
+
+void App::advance() {
+	// TODO: skip first check if repeat all
+	auto const pred = [this] {
+		return (m_player->get_repeat() == Player::Repeat::All || m_playlist.has_next_track()) &&
+			   m_playlist.has_playable_track();
+	};
+	if (!cycle(pred, [this] { return m_playlist.cycle_next(); })) { return; }
+	m_player->play();
 }
 
 void App::on_prev() {

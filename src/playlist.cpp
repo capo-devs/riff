@@ -33,6 +33,11 @@ auto Playlist::has_playable_track() const -> bool {
 	return std::ranges::any_of(m_tracks, [](Track const& t) { return t.status != Track::Status::Error; });
 }
 
+auto Playlist::has_next_track() const -> bool {
+	if (m_tracks.empty()) { return false; }
+	return m_active + 1 < int(m_tracks.size());
+}
+
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
 auto Playlist::get_active() -> Track* { return const_cast<Track*>(std::as_const(*this).get_active()); }
 

@@ -11,6 +11,7 @@ class Playlist {
 
 	[[nodiscard]] auto get_tracks() const -> std::span<Track const> { return m_tracks; }
 	[[nodiscard]] auto has_playable_track() const -> bool;
+	[[nodiscard]] auto has_next_track() const -> bool;
 
 	[[nodiscard]] auto get_active() const -> Track const*;
 	[[nodiscard]] auto get_active() -> Track*;
