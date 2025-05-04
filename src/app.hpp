@@ -11,6 +11,7 @@ class App {
 	auto run(int argc, char const* const* argv) -> int;
 
   private:
+	void create_player();
 	void create_context();
 	void setup_imgui();
 

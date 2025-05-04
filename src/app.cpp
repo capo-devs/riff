@@ -44,10 +44,9 @@ auto App::run(int const argc, char const* const* argv) -> int {
 	auto const parse_result = klib::args::parse_main(app_info, {}, argc, argv);
 	if (parse_result.early_return()) { return parse_result.get_return_code(); }
 
+	create_player();
 	create_context();
 	setup_imgui();
-
-	m_player.emplace();
 
 	while (m_context->next_frame()) {
 		update();
@@ -55,6 +54,13 @@ auto App::run(int const argc, char const* const* argv) -> int {
 	}
 
 	return EXIT_SUCCESS;
+}
+
+void App::create_player() {
+	m_player.emplace();
+	// TODO: saved state
+	m_player->set_volume(100);
+	m_player->set_balance(0.0f);
 }
 
 void App::create_context() {

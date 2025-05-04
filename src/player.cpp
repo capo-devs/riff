@@ -10,8 +10,11 @@ namespace riff {
 namespace {
 auto const duration_0_str = capo::format_duration(0s);
 
-void align_right(float const width) {
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - width);
+template <std::same_as<float>... Ts>
+void align_right(float const width, Ts const... widths) {
+	auto const spacing = float(sizeof...(widths)) * ImGui::GetStyle().ItemSpacing.x;
+	auto const total_width = width + (spacing + ... + widths);
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - total_width);
 }
 } // namespace
 
@@ -75,18 +78,29 @@ void Player::buttons() {
 void Player::sliders() {
 	static constexpr auto volume_width_v = 100.0f;
 	static constexpr auto balance_width_v = 100.0f;
-	align_right(balance_width_v);
-
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 50.0f);
+
+	auto const balance_icon_size = ImGui::CalcTextSize(ICON_KI_SORT_HORIZONTAL);
+	align_right(balance_icon_size.x, balance_width_v);
+	ImGui::TextUnformatted(ICON_KI_SORT_HORIZONTAL);
+	ImGui::SameLine();
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * balance_icon_size.y));
 	ImGui::SetNextItemWidth(balance_width_v);
 	auto balance = m_source->get_pan();
 	if (ImGui::SliderFloat("##balance", &balance, -1.0f, 1.0f, "%.1f")) { m_source->set_pan(balance); }
-	align_right(volume_width_v);
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (0.2f * balance_icon_size.y));
+
+	auto const volume_icon_size = ImGui::CalcTextSize(ICON_KI_SOUND_ON);
+	align_right(volume_icon_size.x, volume_width_v);
+	ImGui::TextUnformatted(ICON_KI_SOUND_ON);
+	ImGui::SameLine();
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * volume_icon_size.y));
 	ImGui::SetNextItemWidth(volume_width_v);
 	auto volume = int(m_source->get_gain() * 100.0f);
 	if (ImGui::SliderInt("##volume", &volume, 0, 100, "%d", ImGuiSliderFlags_ClampZeroRange)) {
 		m_source->set_gain(float(volume) * 0.01f);
 	}
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (0.2f * volume_icon_size.y));
 }
 
 void Player::seekbar() {
