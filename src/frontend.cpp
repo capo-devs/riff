@@ -25,7 +25,7 @@ Frontend::Frontend(State* state) : m_state(state), m_duration_str(duration_0_str
 			set_now_playing({});
 			return;
 		}
-		set_now_playing(m_state->playlist.at(*m_state->now_playing));
+		set_now_playing(*m_state->active_track());
 	});
 }
 
@@ -61,14 +61,17 @@ void Frontend::draw_controls(Track const* active_track) {
 void Frontend::draw_buttons(Track const* active_track) {
 	ImGui::SetNextItemWidth(50.0f);
 	if (active_track == nullptr) { ImGui::BeginDisabled(); }
-	auto const* play_str = m_state->is_playing ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT;
-	if (ImGui::ButtonEx(play_str, {50.0f, 50.0f})) {
+	if (ImGui::ButtonEx(m_state->is_playing ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT, {50.0f, 50.0f})) {
 		if (m_state->is_playing) {
 			m_state->on_pause.dispatch();
 		} else {
 			m_state->on_play.dispatch();
 		}
 	}
+	ImGui::SameLine();
+	if (ImGui::ButtonEx(ICON_KI_STEP_BACKWARD, {30.0f, 30.0f})) { m_state->on_play_previous.dispatch(); }
+	ImGui::SameLine();
+	if (ImGui::ButtonEx(ICON_KI_STEP_FORWARD, {30.0f, 30.0f})) { m_state->on_play_next.dispatch(); }
 	if (active_track == nullptr) { ImGui::EndDisabled(); }
 
 	static constexpr auto volume_width_v = 100.0f;
@@ -123,23 +126,82 @@ void Frontend::draw_menu_bar() {
 }
 
 void Frontend::draw_playlist() {
+	if (m_state->playlist.empty()) { m_selected = -1; }
 	ImGui::Separator();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
 	ImGui::TextUnformatted(ICON_KI_LIST);
+	auto const none_selected = m_selected < 0;
+	if (none_selected) { ImGui::BeginDisabled(); }
+	ImGui::SameLine();
+	draw_remove_track();
+	ImGui::SameLine();
+	draw_move_track_up();
+	ImGui::SameLine();
+	draw_move_track_down();
+	if (none_selected) { ImGui::EndDisabled(); }
+	draw_track_child();
+}
+
+void Frontend::draw_remove_track() {
+	if (ImGui::Button(ICON_KI_TIMES)) {
+		if (m_state->now_playing == m_selected) { m_state->on_unbind.dispatch(); }
+		auto const index = std::ptrdiff_t(m_selected);
+		m_state->playlist.erase(m_state->playlist.begin() + index);
+		if (std::size_t(m_selected) >= m_state->playlist.size()) {
+			m_selected = std::int32_t(m_state->playlist.size() - 1);
+		}
+	}
+}
+
+void Frontend::draw_move_track_up() {
+	auto const is_first = m_selected == 0;
+	if (is_first) { ImGui::BeginDisabled(); }
+	if (ImGui::Button(ICON_KI_ARROW_TOP)) {
+		assert(m_selected > 0);
+		swap_tracks(std::size_t(m_selected), std::size_t(m_selected - 1));
+	}
+	if (is_first) { ImGui::EndDisabled(); }
+}
+
+void Frontend::draw_move_track_down() {
+	auto const is_last = !m_state->playlist.empty() && m_selected == std::int32_t(m_state->playlist.size() - 1);
+	if (is_last) { ImGui::BeginDisabled(); }
+	if (ImGui::Button(ICON_KI_ARROW_BOTTOM)) {
+		assert(m_selected + 1 < std::int32_t(m_state->playlist.size()));
+		swap_tracks(std::size_t(m_selected), std::size_t(m_selected + 1));
+	}
+	if (is_last) { ImGui::EndDisabled(); }
+}
+
+void Frontend::draw_track_child() {
 	ImGui::BeginChild("playlist", {}, ImGuiChildFlags_Borders);
 	for (auto const [index, track] : std::views::enumerate(m_state->playlist)) {
-		auto const is_now_playing = m_state->now_playing && *m_state->now_playing == index;
+		auto const is_now_playing = m_state->now_playing == std::int32_t(index);
 		if (is_now_playing) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 1.0f, 0.0f, 1.0f}); }
 		auto const is_selected = m_selected == index;
-		if (ImGui::Selectable(track.name.c_str(), m_selected == index)) {
+		if (ImGui::Selectable(track.name.c_str(), m_selected == std::int32_t(index))) {
 			m_selected = is_selected ? -1 : std::int32_t(index);
 		}
 		if (is_now_playing) { ImGui::PopStyleColor(); }
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-			m_state->now_playing = index;
+			m_state->now_playing = std::int32_t(index);
 			m_state->on_track_select.dispatch();
 		}
 	}
 	ImGui::EndChild();
+}
+
+void Frontend::swap_tracks(std::size_t const idx_a, std::size_t const idx_b) {
+	std::swap(m_state->playlist.at(idx_a), m_state->playlist.at(idx_b));
+	if (m_selected == std::int32_t(idx_a)) {
+		m_selected = std::int32_t(idx_b);
+	} else if (m_selected == std::int32_t(idx_b)) {
+		m_selected = std::int32_t(idx_a);
+	}
+	if (m_state->now_playing == idx_a) {
+		m_state->now_playing = std::int32_t(idx_b);
+	} else if (m_state->now_playing == idx_b) {
+		m_state->now_playing = std::int32_t(idx_a);
+	}
 }
 } // namespace riff

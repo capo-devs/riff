@@ -26,7 +26,14 @@ Backend::Backend(State* state) : m_state(state) {
 		m_source->stop();
 		m_state->is_playing = false;
 	});
-	m_state->on_track_select.connect([this] { try_play_sequential(); });
+	m_state->on_unbind.connect([this] {
+		m_state->now_playing = -1;
+		m_state->is_playing = false;
+		m_source->unbind();
+	});
+	m_state->on_play_next.connect([this] { play_next(true); });
+	m_state->on_play_previous.connect([this] { play_previous(); });
+	m_state->on_track_select.connect([this] { play_next(false); });
 	m_state->gain_changed.connect([set_gain] { set_gain(); });
 	m_state->balance_changed.connect([set_pan] { set_pan(); });
 
@@ -41,7 +48,7 @@ void Backend::on_drop(std::span<char const* const> paths) {
 		if (!check_track(track)) { continue; }
 		m_state->playlist.push_back(std::move(track));
 	}
-	if (was_empty && !m_state->playlist.empty()) { play_next(); }
+	if (was_empty && !m_state->playlist.empty()) { play_next(true); }
 	return;
 
 	auto const* path = paths.front();
@@ -63,7 +70,7 @@ void Backend::on_drop(std::span<char const* const> paths) {
 
 void Backend::update() {
 	auto const track_ended = m_state->is_playing && !m_source->is_playing();
-	if (track_ended) { play_next(); }
+	if (track_ended) { play_next(true); }
 	if (m_source->is_bound()) { m_state->cursor = m_source->get_cursor(); }
 	m_state->gain = m_source->get_gain();
 	m_state->is_playing = m_source->is_playing();
@@ -81,20 +88,36 @@ auto Backend::check_track(Track& track) -> bool {
 	return true;
 }
 
-void Backend::play_next() {
-	if (!m_state->now_playing) {
+void Backend::play_next(bool const pre_increment) {
+	if (m_state->now_playing < 0) {
 		m_state->now_playing = 0;
-	} else {
-		++*m_state->now_playing;
+	} else if (pre_increment) {
+		++m_state->now_playing;
 	}
-	try_play_sequential();
+	auto const pred = [this] { return m_state->now_playing < std::int32_t(m_state->playlist.size()); };
+	auto const post = [this] { ++m_state->now_playing; };
+	try_play(pred, post);
 }
 
-void Backend::try_play_sequential() {
-	if (!m_state->now_playing) { return; }
+void Backend::play_previous() {
+	if (m_state->cursor > 3s) {
+		m_state->cursor = 0s;
+		m_state->on_seek.dispatch();
+		return;
+	}
 
-	for (; *m_state->now_playing < m_state->playlist.size(); ++*m_state->now_playing) {
-		auto& track = m_state->playlist.at(*m_state->now_playing);
+	--m_state->now_playing;
+	auto const pred = [this] { return m_state->now_playing >= 0; };
+	auto const post = [this] { --m_state->now_playing; };
+	try_play(pred, post);
+}
+
+template <typename Pred, typename Post>
+void Backend::try_play(Pred pred, Post post) {
+	if (m_state->now_playing == -1) { return; }
+
+	for (; pred(); post()) {
+		auto& track = m_state->playlist.at(std::size_t(m_state->now_playing));
 		if (play_track(track)) {
 			m_state->track_changed.dispatch();
 			return;
@@ -102,7 +125,7 @@ void Backend::try_play_sequential() {
 	}
 
 	m_state->is_playing = false;
-	m_state->now_playing.reset();
+	m_state->now_playing = -1;
 	m_state->track_changed.dispatch();
 }
 

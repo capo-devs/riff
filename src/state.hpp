@@ -1,7 +1,6 @@
 #pragma once
 #include <track.hpp>
 #include <functional>
-#include <optional>
 #include <vector>
 
 namespace riff {
@@ -24,11 +23,11 @@ class Signal {
 
 struct State {
 	[[nodiscard]] auto active_track() const -> Track const* {
-		return now_playing ? &playlist.at(*now_playing) : nullptr;
+		return now_playing >= 0 ? &playlist.at(std::size_t(now_playing)) : nullptr;
 	}
 
 	std::vector<Track> playlist{};
-	std::optional<std::size_t> now_playing{};
+	std::int32_t now_playing{-1};
 
 	float gain{1.0f};
 	float balance{0.0f};
@@ -43,5 +42,8 @@ struct State {
 	Signal on_seek{};
 	Signal on_quit{};
 	Signal on_track_select{};
+	Signal on_unbind{};
+	Signal on_play_next{};
+	Signal on_play_previous{};
 };
 } // namespace riff

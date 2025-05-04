@@ -16,7 +16,8 @@ message(STATUS "[riff]")
 
 configure_file(src/build_version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/include/build_version.hpp")
 
-add_executable(${PROJECT_NAME})
+add_executable(${PROJECT_NAME} WIN32)
+klib_set_mainCRTStartup(${PROJECT_NAME})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
   gvdi::gvdi

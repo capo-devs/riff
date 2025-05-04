@@ -15,9 +15,12 @@ class Backend {
   private:
 	auto check_track(Track& track) -> bool;
 
-	void play_next();
-	void try_play_sequential();
+	void play_previous();
+	void play_next(bool pre_increment);
 	auto play_track(Track& track) -> bool;
+
+	template <typename Pred, typename Post>
+	void try_play(Pred pred, Post post);
 
 	State* m_state{};
 

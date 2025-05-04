@@ -1,8 +1,8 @@
 #pragma once
-#include <backend.hpp>
 #include <capo/engine.hpp>
-#include <frontend.hpp>
 #include <gvdi/context.hpp>
+#include <player.hpp>
+#include <playlist.hpp>
 #include <optional>
 
 namespace riff {
@@ -14,15 +14,22 @@ class App {
 	void create_context();
 	void setup_imgui();
 
-	void draw_frontend();
+	void on_drop(std::span<char const* const> paths);
+	void update();
+	void update_player();
+	void update_playlist();
+
+	template <typename F>
+	auto cycle(F get_track) -> bool;
+	void on_next();
+	void on_prev();
 
 	static void install_callbacks(GLFWwindow* window);
 
 	std::optional<gvdi::Context> m_context{};
 
-	State m_state{};
-
-	std::optional<Backend> m_backend{};
-	std::optional<Frontend> m_frontend{};
+	std::optional<Player> m_player{};
+	Playlist m_playlist{};
+	bool m_playing{};
 };
 } // namespace riff

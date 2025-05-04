@@ -1,0 +1,111 @@
+#include <IconsKenney.h>
+#include <imgui.h>
+#include <imgui_internal.h>
+#include <capo/format.hpp>
+#include <player.hpp>
+#include <cassert>
+#include <utility>
+
+namespace riff {
+namespace {
+auto const duration_0_str = capo::format_duration(0s);
+
+void align_right(float const width) {
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - width);
+}
+} // namespace
+
+Player::Player() {
+	m_engine = capo::create_engine();
+	if (!m_engine) { throw std::runtime_error{"Failed to create Audio Engine"}; }
+	m_source = m_engine->create_source();
+	if (!m_source) { throw std::runtime_error{"Failed to create Audio Source"}; }
+
+	m_duration_str = m_cursor_str = duration_0_str;
+}
+
+auto Player::load_track(Track& track) -> bool {
+	auto const was_playing = is_playing();
+	if (!m_source->open_stream(track.path.c_str())) {
+		track.status = Track::Status::Error;
+		return false;
+	}
+	m_title = track.name;
+	track.status = Track::Status::Ok;
+	track.duration = m_source->get_duration();
+	m_duration_str.clear();
+	capo::format_duration_to(m_duration_str, track.duration);
+	m_seeking = false;
+	if (was_playing) { play(); }
+	return true;
+}
+
+auto Player::update() -> Action {
+	m_cursor_str.clear();
+	capo::format_duration_to(m_cursor_str, Time{m_cursor});
+	if (!m_seeking) { m_cursor = std::max(m_source->get_cursor().count(), 0.0f); }
+
+	ImGui::TextUnformatted(m_title.c_str());
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
+	buttons();
+	sliders();
+	seekbar();
+
+	return std::exchange(m_action, Action::None);
+}
+
+void Player::buttons() {
+	ImGui::SetNextItemWidth(50.0f);
+	if (!m_source->is_bound()) { ImGui::BeginDisabled(); }
+	if (ImGui::ButtonEx(m_source->is_playing() ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT, {50.0f, 50.0f})) {
+		if (m_source->is_playing()) {
+			m_source->stop();
+		} else {
+			m_source->play();
+		}
+	}
+
+	ImGui::SameLine();
+	if (ImGui::ButtonEx(ICON_KI_STEP_BACKWARD, {30.0f, 30.0f})) { m_action = Action::Previous; }
+	ImGui::SameLine();
+	if (ImGui::ButtonEx(ICON_KI_STEP_FORWARD, {30.0f, 30.0f})) { m_action = Action::Next; }
+	if (!m_source->is_bound()) { ImGui::EndDisabled(); }
+}
+
+void Player::sliders() {
+	static constexpr auto volume_width_v = 100.0f;
+	static constexpr auto balance_width_v = 100.0f;
+	align_right(balance_width_v);
+
+	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 50.0f);
+	ImGui::SetNextItemWidth(balance_width_v);
+	auto balance = m_source->get_pan();
+	if (ImGui::SliderFloat("##balance", &balance, -1.0f, 1.0f, "%.1f")) { m_source->set_pan(balance); }
+	align_right(volume_width_v);
+	ImGui::SetNextItemWidth(volume_width_v);
+	auto volume = int(m_source->get_gain() * 100.0f);
+	if (ImGui::SliderInt("##volume", &volume, 0, 100, "%d", ImGuiSliderFlags_ClampZeroRange)) {
+		m_source->set_gain(float(volume) * 0.01f);
+	}
+}
+
+void Player::seekbar() {
+	ImGui::NewLine();
+	ImGui::TextUnformatted(duration_0_str.c_str());
+	auto const duration_width = ImGui::CalcTextSize(m_duration_str.c_str()).x;
+	ImGui::SameLine();
+	align_right(duration_width);
+	ImGui::TextUnformatted(m_duration_str.c_str());
+
+	auto fduration = std::max(m_source->get_duration().count(), 0.0f);
+	if (fduration == 0.0f) { ImGui::BeginDisabled(); }
+	ImGui::SetNextItemWidth(-1.0f);
+	static constexpr auto flags_v = ImGuiSliderFlags_NoInput;
+	ImGui::SliderFloat("##cursor", &m_cursor, 0.0f, fduration, m_cursor_str.c_str(), flags_v);
+	if (ImGui::IsItemClicked()) { m_seeking = true; }
+	auto const was_seeking = m_seeking;
+	if (m_seeking && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) { m_seeking = false; }
+	if (was_seeking && !m_seeking) { m_source->set_cursor(Time{m_cursor}); }
+	if (fduration == 0.0f) { ImGui::EndDisabled(); }
+}
+} // namespace riff

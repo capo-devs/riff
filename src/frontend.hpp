@@ -19,6 +19,12 @@ class Frontend {
 	void draw_buttons(Track const* active_track);
 	void draw_seekbar(Time track_duration);
 	void draw_playlist();
+	void draw_remove_track();
+	void draw_move_track_up();
+	void draw_move_track_down();
+	void draw_track_child();
+
+	void swap_tracks(std::size_t idx_a, std::size_t idx_b);
 
 	State* m_state{};
 

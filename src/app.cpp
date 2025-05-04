@@ -44,17 +44,13 @@ auto App::run(int const argc, char const* const* argv) -> int {
 	auto const parse_result = klib::args::parse_main(app_info, {}, argc, argv);
 	if (parse_result.early_return()) { return parse_result.get_return_code(); }
 
-	m_state.on_quit.connect([this] { glfwSetWindowShouldClose(m_context->get_window(), GLFW_TRUE); });
-
-	m_backend.emplace(&m_state);
 	create_context();
 	setup_imgui();
-	m_frontend.emplace(&m_state);
+
+	m_player.emplace();
 
 	while (m_context->next_frame()) {
-		m_backend->update();
-		draw_frontend();
-
+		update();
 		m_context->render();
 	}
 
@@ -90,19 +86,104 @@ void App::setup_imgui() {
 		rounding_v;
 }
 
-void App::draw_frontend() {
+void App::update() {
 	auto const& viewport = *ImGui::GetMainViewport();
 	ImGui::SetNextWindowPos(viewport.WorkPos, ImGuiCond_Always);
 	ImGui::SetNextWindowSize(viewport.WorkSize);
 	static constexpr auto flags_v =
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
-	if (ImGui::Begin("main", nullptr, flags_v)) { m_frontend->draw(); }
+	if (ImGui::Begin("main", nullptr, flags_v)) {
+		if (m_playing && m_player->at_end()) {
+			// TODO: don't wrap if not repeat all
+			if (cycle([this] { return m_playlist.cycle_next(); })) { m_player->play(); }
+		}
+		m_playing = m_player->is_playing();
+		update_player();
+		ImGui::Separator();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
+		update_playlist();
+	}
 	ImGui::End();
+}
+
+void App::update_player() {
+	auto const player_action = m_player->update();
+	switch (player_action) {
+	case Player::Action::None: break;
+	case Player::Action::Previous: on_prev(); break;
+	case Player::Action::Next: on_next(); break;
+	default: break;
+	}
+}
+
+void App::update_playlist() {
+	auto const playlist_action = m_playlist.update();
+	switch (playlist_action) {
+	case Playlist::Action::None: break;
+	case Playlist::Action::Load: {
+		auto* track = m_playlist.get_active();
+		if (track != nullptr) {
+			m_player->load_track(*track);
+			if (!m_player->is_playing()) { m_player->play(); }
+		}
+		break;
+	}
+	case Playlist::Action::Unload: {
+		m_player->unload_track();
+		m_playing = false;
+		break;
+	}
+	default: break;
+	}
+}
+
+template <typename F>
+auto App::cycle(F get_track) -> bool {
+	while (m_playlist.has_playable_track()) {
+		auto* track = get_track();
+		if (track == nullptr) { return false; }
+		if (m_player->load_track(*track)) { return true; }
+		log.error("failed to load file: {}", track->path);
+	}
+	return false;
+}
+
+void App::on_prev() {
+	if (m_player->is_playing() && m_player->get_cursor() > 3s) {
+		m_player->set_cursor(0s);
+		return;
+	}
+	cycle([this] { return m_playlist.cycle_prev(); });
+}
+
+void App::on_next() {
+	cycle([this] { return m_playlist.cycle_next(); });
+}
+
+void App::on_drop(std::span<char const* const> paths) {
+	auto const was_empty = m_playlist.get_tracks().empty();
+	for (auto const* path : paths) {
+		if (!m_playlist.push(path)) {
+			log.info("skipping non-music file: {}", path);
+			return;
+		}
+	}
+	if (!was_empty) { return; }
+
+	auto* track = m_playlist.get_active();
+	if (track == nullptr) { return; }
+
+	if (!m_player->load_track(*track)) {
+		log.error("failed to load file: {}", track->path);
+		return;
+	}
+	m_player->play();
 }
 
 void App::install_callbacks(GLFWwindow* window) {
 	glfwSetDropCallback(window, [](GLFWwindow* window, int count, char const** paths) {
-		self(window).m_backend->on_drop(std::span{paths, std::size_t(count)});
+		// self(window).m_backend->on_drop(std::span{paths, std::size_t(count)});
+		self(window).on_drop({paths, std::size_t(count)});
 	});
 }
 } // namespace riff
