@@ -2,10 +2,8 @@
 #include <app.hpp>
 #include <build_version.hpp>
 #include <embedded.hpp>
-#include <klib/args/parse.hpp>
 #include <klib/version_str.hpp>
 #include <log.hpp>
-#include <cstdlib>
 
 namespace riff {
 namespace {
@@ -15,8 +13,7 @@ struct ImFontLoader {
 	auto load(std::span<std::byte const> bytes, float const size, ImWchar const* glyph_ranges = {}) {
 		auto config = ImFontConfig{};
 		config.FontDataOwnedByAtlas = false;
-		config.MergeMode = m_merge;
-		m_merge = true;
+		config.MergeMode = std::exchange(m_merge, true);
 		if (glyph_ranges == nullptr) { glyph_ranges = io.Fonts->GetGlyphRangesDefault(); }
 		auto* data = const_cast<std::byte*>(bytes.data()); // NOLINT(cppcoreguidelines-pro-type-const-cast)
 		auto const data_size = int(bytes.size());
@@ -35,15 +32,8 @@ struct ImFontLoader {
 };
 } // namespace
 
-auto App::run(int const argc, char const* const* argv) -> int {
-	auto const version = klib::to_string(build_version_v);
-	auto const app_info = klib::args::ParseInfo{
-		.help_text = "riff: audio player demo using capo-lite",
-		.version = version,
-	};
-	auto const parse_result = klib::args::parse_main(app_info, {}, argc, argv);
-	if (parse_result.early_return()) { return parse_result.get_return_code(); }
-
+void App::run() {
+	create_engine();
 	create_player();
 	create_context();
 	setup_imgui();
@@ -52,19 +42,26 @@ auto App::run(int const argc, char const* const* argv) -> int {
 		update();
 		m_context->render();
 	}
+}
 
-	return EXIT_SUCCESS;
+void App::create_engine() {
+	m_engine = capo::create_engine();
+	if (!m_engine) { throw std::runtime_error{"Failed to create Audio Engine"}; }
 }
 
 void App::create_player() {
-	m_player.emplace();
+	auto source = m_engine->create_source();
+	if (!source) { throw std::runtime_error{"Failed to create Audio Source"}; }
+
+	m_player.emplace(std::move(source));
 	// TODO: saved state
 	m_player->set_volume(100);
 	m_player->set_balance(0.0f);
 }
 
 void App::create_context() {
-	auto window = gvdi::Context::create_window({500.0f, 350.0f}, "riff");
+	auto const title = std::format("riff v{}", klib::to_string(build_version_v));
+	auto window = gvdi::Context::create_window({500.0f, 350.0f}, title.c_str());
 	if (!window) { throw std::runtime_error{"Failed to create Window"}; }
 
 	glfwSetWindowUserPointer(window.get(), this);

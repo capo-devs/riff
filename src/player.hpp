@@ -1,5 +1,5 @@
 #pragma once
-#include <capo/engine.hpp>
+#include <capo/source.hpp>
 #include <track.hpp>
 
 namespace riff {
@@ -7,7 +7,7 @@ class Player {
   public:
 	enum class Action : std::int8_t { None, Previous, Next };
 
-	explicit Player();
+	explicit Player(std::unique_ptr<capo::ISource> source);
 
 	[[nodiscard]] auto get_volume() const -> int { return int(m_source->get_gain() * 100.0f); }
 	void set_volume(int const volume) { m_source->set_gain(float(volume) * 0.01f); }
@@ -36,7 +36,6 @@ class Player {
 	void sliders();
 	void seekbar();
 
-	std::unique_ptr<capo::IEngine> m_engine{};
 	std::unique_ptr<capo::ISource> m_source{};
 
 	std::string m_title{blank_title_v};

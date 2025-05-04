@@ -18,12 +18,8 @@ void align_right(float const width, Ts const... widths) {
 }
 } // namespace
 
-Player::Player() {
-	m_engine = capo::create_engine();
-	if (!m_engine) { throw std::runtime_error{"Failed to create Audio Engine"}; }
-	m_source = m_engine->create_source();
-	if (!m_source) { throw std::runtime_error{"Failed to create Audio Source"}; }
-
+Player::Player(std::unique_ptr<capo::ISource> source) : m_source(std::move(source)) {
+	assert(m_source);
 	m_duration_str = m_cursor_str = duration_0_str;
 }
 

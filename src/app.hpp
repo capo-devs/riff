@@ -8,9 +8,10 @@
 namespace riff {
 class App {
   public:
-	auto run(int argc, char const* const* argv) -> int;
+	void run();
 
   private:
+	void create_engine();
 	void create_player();
 	void create_context();
 	void setup_imgui();
@@ -27,9 +28,10 @@ class App {
 
 	static void install_callbacks(GLFWwindow* window);
 
+	std::unique_ptr<capo::IEngine> m_engine{};
+	std::optional<Player> m_player{};
 	std::optional<gvdi::Context> m_context{};
 
-	std::optional<Player> m_player{};
 	Playlist m_playlist{};
 	bool m_playing{};
 };
