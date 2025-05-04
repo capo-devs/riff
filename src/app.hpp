@@ -30,6 +30,8 @@ class App {
 	void on_prev();
 	void advance();
 
+	auto load_track(Track& track) -> bool;
+
 	static void install_callbacks(GLFWwindow* window);
 
 	std::unique_ptr<capo::IEngine> m_engine{};

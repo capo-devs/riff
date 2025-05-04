@@ -4,19 +4,13 @@
 #include <capo/format.hpp>
 #include <klib/enum_array.hpp>
 #include <player.hpp>
+#include <util.hpp>
 #include <cassert>
 #include <utility>
 
 namespace riff {
 namespace {
 auto const duration_0_str = capo::format_duration(0s);
-
-template <std::same_as<float>... Ts>
-void align_right(float const width, Ts const... widths) {
-	auto const spacing = float(sizeof...(widths)) * ImGui::GetStyle().ItemSpacing.x;
-	auto const total_width = width + (spacing + ... + widths);
-	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - total_width);
-}
 
 constexpr auto repeat_icon_v = klib::EnumArray<Player::Repeat, char const*>{
 	ICON_KI_MINUS,
@@ -41,6 +35,8 @@ auto Player::load_track(Track& track) -> bool {
 	track.duration = m_source->get_duration();
 	m_duration_str.clear();
 	capo::format_duration_to(m_duration_str, track.duration);
+	track.duration_label.clear();
+	track.duration_label.append(m_duration_str);
 	m_seeking = false;
 	if (was_playing) { play(); }
 	return true;
@@ -92,7 +88,7 @@ void Player::sliders() {
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 50.0f);
 
 	auto const balance_icon_size = ImGui::CalcTextSize(ICON_KI_SORT_HORIZONTAL);
-	align_right(balance_icon_size.x, balance_width_v);
+	util::align_right(balance_icon_size.x, balance_width_v);
 	ImGui::TextUnformatted(ICON_KI_SORT_HORIZONTAL);
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * balance_icon_size.y));
@@ -102,7 +98,7 @@ void Player::sliders() {
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (0.2f * balance_icon_size.y));
 
 	auto const volume_icon_size = ImGui::CalcTextSize(ICON_KI_SOUND_ON);
-	align_right(volume_icon_size.x, volume_width_v);
+	util::align_right(volume_icon_size.x, volume_width_v);
 	ImGui::TextUnformatted(ICON_KI_SOUND_ON);
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * volume_icon_size.y));
@@ -119,7 +115,7 @@ void Player::seekbar() {
 	ImGui::TextUnformatted(duration_0_str.c_str());
 	auto const duration_width = ImGui::CalcTextSize(m_duration_str.c_str()).x;
 	ImGui::SameLine();
-	align_right(duration_width);
+	util::align_right(duration_width);
 	ImGui::TextUnformatted(m_duration_str.c_str());
 
 	auto fduration = std::max(m_source->get_duration().count(), 0.0f);

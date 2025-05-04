@@ -1,6 +1,7 @@
 #include <IconsKenney.h>
 #include <imgui.h>
 #include <track_list.hpp>
+#include <util.hpp>
 #include <algorithm>
 #include <array>
 #include <filesystem>
@@ -29,6 +30,11 @@ auto Tracklist::get_active() const -> Track const* {
 	return &m_tracks.at(std::size_t(m_active));
 }
 
+auto Tracklist::get_track(int const index) -> Track* {
+	if (index < 0 || index >= int(m_tracks.size())) { return nullptr; }
+	return &m_tracks.at(std::size_t(index));
+}
+
 auto Tracklist::has_playable_track() const -> bool {
 	return std::ranges::any_of(m_tracks, [](Track const& t) { return t.status != Track::Status::Error; });
 }
@@ -41,11 +47,16 @@ auto Tracklist::has_next_track() const -> bool {
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
 auto Tracklist::get_active() -> Track* { return const_cast<Track*>(std::as_const(*this).get_active()); }
 
+auto Tracklist::set_active(int const index) -> bool {
+	if (index < -1 || index >= int(m_tracks.size())) { return false; }
+	m_active = index;
+	return true;
+}
+
 auto Tracklist::push(char const* path) -> bool {
 	auto const fs_path = fs::path{path};
 	if (!is_music(fs_path)) { return false; }
 	m_tracks.push_back(to_track(fs_path, m_prev_id));
-	if (m_tracks.size() == 1) { m_active = 0; }
 	return true;
 }
 
@@ -91,13 +102,13 @@ auto Tracklist::update() -> Action {
 	if (none_selected) { ImGui::EndDisabled(); }
 	track_list();
 
-	return std::exchange(m_action, Action::None);
+	return std::exchange(m_action, {});
 }
 
 void Tracklist::remove_track() {
 	if (ImGui::Button(ICON_KI_TIMES)) {
 		if (m_active == m_cursor) {
-			m_action = Action::Unload;
+			m_action = UnloadTrack{};
 			m_active = -1;
 		}
 		auto const index = std::ptrdiff_t(m_cursor);
@@ -130,13 +141,24 @@ void Tracklist::track_list() {
 	ImGui::BeginChild("Tracklist", {}, ImGuiChildFlags_Borders);
 	for (auto const [index, track] : std::views::enumerate(m_tracks)) {
 		auto const is_now_playing = m_active == std::int32_t(index);
-		if (is_now_playing) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 1.0f, 0.0f, 1.0f}); }
+		auto const is_error = track.status == Track::Status::Error;
+		if (is_error) {
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 0.3f, 0.0f, 1.0f});
+		} else if (is_now_playing) {
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{0.5f, 1.0f, 0.2f, 1.0f});
+		}
 		auto const is_selected = m_cursor == std::int32_t(index);
 		if (ImGui::Selectable(track.label.c_str(), is_selected)) { m_cursor = std::int32_t(index); }
-		if (is_now_playing) { ImGui::PopStyleColor(); }
+		if (is_now_playing || is_error) { ImGui::PopStyleColor(); }
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-			m_active = m_cursor = std::int32_t(index);
-			m_action = Action::Load;
+			m_cursor = std::int32_t(index);
+			m_action = PlayTrack{.index = m_cursor};
+		}
+		if (track.status == Track::Status::Ok) {
+			ImGui::SameLine();
+			auto const width = ImGui::CalcTextSize(track.duration_label.c_str()).x;
+			util::align_right(width);
+			ImGui::TextUnformatted(track.duration_label.c_str());
 		}
 	}
 	ImGui::EndChild();

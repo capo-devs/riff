@@ -3,6 +3,7 @@
 #include <build_version.hpp>
 #include <embedded.hpp>
 #include <klib/version_str.hpp>
+#include <klib/visitor.hpp>
 #include <log.hpp>
 
 namespace riff {
@@ -119,23 +120,24 @@ void App::update_player() {
 
 void App::update_tracklist() {
 	auto const action = m_tracklist.update();
-	switch (action) {
-	case Tracklist::Action::None: break;
-	case Tracklist::Action::Load: {
-		auto* track = m_tracklist.get_active();
-		if (track != nullptr) {
-			m_player->load_track(*track);
+	auto const visitor = klib::Visitor{
+		[](std::monostate) {},
+		[this](Tracklist::PlayTrack const play_track) {
+			auto* track = m_tracklist.get_track(play_track.index);
+			if (track == nullptr) { return; }
+			if (!load_track(*track)) {
+				m_tracklist.set_active(-1);
+				return;
+			}
+			m_tracklist.set_active(play_track.index);
 			if (!m_player->is_playing()) { m_player->play(); }
-		}
-		break;
-	}
-	case Tracklist::Action::Unload: {
-		m_player->unload_track();
-		m_playing = false;
-		break;
-	}
-	default: break;
-	}
+		},
+		[this](Tracklist::UnloadTrack) {
+			m_player->unload_track();
+			m_playing = false;
+		},
+	};
+	std::visit(visitor, action);
 }
 
 template <typename F>
@@ -148,14 +150,12 @@ auto App::cycle(Pred pred, F get_track) -> bool {
 	while (pred()) {
 		auto* track = get_track();
 		if (track == nullptr) { return false; }
-		if (m_player->load_track(*track)) { return true; }
-		log.error("failed to load file: {}", track->path);
+		if (load_track(*track)) { return true; }
 	}
 	return false;
 }
 
 void App::advance() {
-	// TODO: skip first check if repeat all
 	auto const pred = [this] {
 		return (m_player->get_repeat() == Player::Repeat::All || m_tracklist.has_next_track()) &&
 			   m_tracklist.has_playable_track();
@@ -164,16 +164,26 @@ void App::advance() {
 	m_player->play();
 }
 
+auto App::load_track(Track& track) -> bool {
+	if (m_player->load_track(track)) { return true; }
+	log.error("failed to load track: {}", track.path);
+	return false;
+}
+
 void App::on_prev() {
-	if (m_player->is_playing() && m_player->get_cursor() > 3s) {
+	auto const is_playing = m_player->is_playing();
+	if (is_playing && m_player->get_cursor() > 3s) {
 		m_player->set_cursor(0s);
 		return;
 	}
-	cycle([this] { return m_tracklist.cycle_prev(); });
+	if (!cycle([this] { return m_tracklist.cycle_prev(); })) { return; }
+	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
 void App::on_next() {
+	auto const is_playing = m_player->is_playing();
 	cycle([this] { return m_tracklist.cycle_next(); });
+	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
 void App::on_drop(std::span<char const* const> paths) {
@@ -185,15 +195,7 @@ void App::on_drop(std::span<char const* const> paths) {
 		}
 	}
 	if (!was_empty) { return; }
-
-	auto* track = m_tracklist.get_active();
-	if (track == nullptr) { return; }
-
-	if (!m_player->load_track(*track)) {
-		log.error("failed to load file: {}", track->path);
-		return;
-	}
-	m_player->play();
+	advance();
 }
 
 void App::install_callbacks(GLFWwindow* window) {
