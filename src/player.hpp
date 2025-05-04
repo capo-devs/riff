@@ -6,6 +6,7 @@ namespace riff {
 class Player {
   public:
 	enum class Action : std::int8_t { None, Previous, Next };
+	enum class Repeat : std::int8_t { None, One, All, COUNT_ };
 
 	explicit Player(std::unique_ptr<capo::ISource> source);
 
@@ -27,6 +28,8 @@ class Player {
 	void play() { m_source->play(); }
 	void pause() { m_source->stop(); }
 
+	[[nodiscard]] auto get_repeat() const -> Repeat { return m_repeat; }
+
 	auto update() -> Action;
 
   private:
@@ -44,6 +47,8 @@ class Player {
 	float m_cursor{};
 	std::string m_cursor_str{};
 	bool m_seeking{};
+
+	Repeat m_repeat{Repeat::None};
 
 	Action m_action{Action::None};
 };

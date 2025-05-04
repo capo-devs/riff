@@ -2,6 +2,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <capo/format.hpp>
+#include <klib/enum_array.hpp>
 #include <player.hpp>
 #include <cassert>
 #include <utility>
@@ -16,6 +17,12 @@ void align_right(float const width, Ts const... widths) {
 	auto const total_width = width + (spacing + ... + widths);
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - total_width);
 }
+
+constexpr auto repeat_icon_v = klib::EnumArray<Player::Repeat, char const*>{
+	ICON_KI_MINUS,
+	ICON_KI_MOVE_RL_ALT,
+	ICON_KI_STICK_MOVE_RL_ALT,
+};
 } // namespace
 
 Player::Player(std::unique_ptr<capo::ISource> source) : m_source(std::move(source)) {
@@ -69,6 +76,14 @@ void Player::buttons() {
 	ImGui::SameLine();
 	if (ImGui::ButtonEx(ICON_KI_STEP_FORWARD, {30.0f, 30.0f})) { m_action = Action::Next; }
 	if (!m_source->is_bound()) { ImGui::EndDisabled(); }
+
+	ImGui::SameLine();
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x);
+	auto const* repeat_icon = repeat_icon_v[m_repeat];
+	if (ImGui::ButtonEx(repeat_icon, {30.0f, 30.0f})) {
+		m_repeat = Repeat((int(m_repeat) + 1) % int(Repeat::COUNT_));
+		m_source->set_looping(m_repeat == Repeat::One);
+	}
 }
 
 void Player::sliders() {
