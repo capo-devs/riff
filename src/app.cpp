@@ -182,7 +182,6 @@ void App::on_drop(std::span<char const* const> paths) {
 
 void App::install_callbacks(GLFWwindow* window) {
 	glfwSetDropCallback(window, [](GLFWwindow* window, int count, char const** paths) {
-		// self(window).m_backend->on_drop(std::span{paths, std::size_t(count)});
 		self(window).on_drop({paths, std::size_t(count)});
 	});
 }
