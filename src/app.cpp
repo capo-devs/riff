@@ -99,7 +99,7 @@ void App::update() {
 		update_player();
 		ImGui::Separator();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-		update_playlist();
+		update_tracklist();
 	}
 	ImGui::End();
 }
@@ -108,8 +108,8 @@ void App::update_player() {
 	if (m_playing && m_player->at_end()) { advance(); }
 	m_playing = m_player->is_playing();
 
-	auto const player_action = m_player->update();
-	switch (player_action) {
+	auto const action = m_player->update();
+	switch (action) {
 	case Player::Action::None: break;
 	case Player::Action::Previous: on_prev(); break;
 	case Player::Action::Next: on_next(); break;
@@ -117,19 +117,19 @@ void App::update_player() {
 	}
 }
 
-void App::update_playlist() {
-	auto const playlist_action = m_playlist.update();
-	switch (playlist_action) {
-	case Playlist::Action::None: break;
-	case Playlist::Action::Load: {
-		auto* track = m_playlist.get_active();
+void App::update_tracklist() {
+	auto const action = m_tracklist.update();
+	switch (action) {
+	case Tracklist::Action::None: break;
+	case Tracklist::Action::Load: {
+		auto* track = m_tracklist.get_active();
 		if (track != nullptr) {
 			m_player->load_track(*track);
 			if (!m_player->is_playing()) { m_player->play(); }
 		}
 		break;
 	}
-	case Playlist::Action::Unload: {
+	case Tracklist::Action::Unload: {
 		m_player->unload_track();
 		m_playing = false;
 		break;
@@ -140,7 +140,7 @@ void App::update_playlist() {
 
 template <typename F>
 auto App::cycle(F get_track) -> bool {
-	return cycle([this] { return m_playlist.has_playable_track(); }, get_track);
+	return cycle([this] { return m_tracklist.has_playable_track(); }, get_track);
 }
 
 template <typename Pred, typename F>
@@ -157,10 +157,10 @@ auto App::cycle(Pred pred, F get_track) -> bool {
 void App::advance() {
 	// TODO: skip first check if repeat all
 	auto const pred = [this] {
-		return (m_player->get_repeat() == Player::Repeat::All || m_playlist.has_next_track()) &&
-			   m_playlist.has_playable_track();
+		return (m_player->get_repeat() == Player::Repeat::All || m_tracklist.has_next_track()) &&
+			   m_tracklist.has_playable_track();
 	};
-	if (!cycle(pred, [this] { return m_playlist.cycle_next(); })) { return; }
+	if (!cycle(pred, [this] { return m_tracklist.cycle_next(); })) { return; }
 	m_player->play();
 }
 
@@ -169,24 +169,24 @@ void App::on_prev() {
 		m_player->set_cursor(0s);
 		return;
 	}
-	cycle([this] { return m_playlist.cycle_prev(); });
+	cycle([this] { return m_tracklist.cycle_prev(); });
 }
 
 void App::on_next() {
-	cycle([this] { return m_playlist.cycle_next(); });
+	cycle([this] { return m_tracklist.cycle_next(); });
 }
 
 void App::on_drop(std::span<char const* const> paths) {
-	auto const was_empty = m_playlist.get_tracks().empty();
+	auto const was_empty = m_tracklist.get_tracks().empty();
 	for (auto const* path : paths) {
-		if (!m_playlist.push(path)) {
+		if (!m_tracklist.push(path)) {
 			log.info("skipping non-music file: {}", path);
 			return;
 		}
 	}
 	if (!was_empty) { return; }
 
-	auto* track = m_playlist.get_active();
+	auto* track = m_tracklist.get_active();
 	if (track == nullptr) { return; }
 
 	if (!m_player->load_track(*track)) {

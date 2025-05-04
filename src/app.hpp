@@ -2,7 +2,7 @@
 #include <capo/engine.hpp>
 #include <gvdi/context.hpp>
 #include <player.hpp>
-#include <playlist.hpp>
+#include <track_list.hpp>
 #include <optional>
 
 namespace riff {
@@ -19,7 +19,7 @@ class App {
 	void on_drop(std::span<char const* const> paths);
 	void update();
 	void update_player();
-	void update_playlist();
+	void update_tracklist();
 
 	template <typename F>
 	auto cycle(F get_track) -> bool;
@@ -36,7 +36,7 @@ class App {
 	std::optional<Player> m_player{};
 	std::optional<gvdi::Context> m_context{};
 
-	Playlist m_playlist{};
+	Tracklist m_tracklist{};
 	bool m_playing{};
 };
 } // namespace riff

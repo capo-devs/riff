@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace riff {
-class Playlist {
+class Tracklist {
   public:
 	enum class Action : std::int8_t { None, Load, Unload };
 

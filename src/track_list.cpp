@@ -1,6 +1,6 @@
 #include <IconsKenney.h>
 #include <imgui.h>
-#include <playlist.hpp>
+#include <track_list.hpp>
 #include <algorithm>
 #include <array>
 #include <filesystem>
@@ -24,24 +24,24 @@ namespace fs = std::filesystem;
 }
 } // namespace
 
-auto Playlist::get_active() const -> Track const* {
+auto Tracklist::get_active() const -> Track const* {
 	if (m_active < 0) { return nullptr; }
 	return &m_tracks.at(std::size_t(m_active));
 }
 
-auto Playlist::has_playable_track() const -> bool {
+auto Tracklist::has_playable_track() const -> bool {
 	return std::ranges::any_of(m_tracks, [](Track const& t) { return t.status != Track::Status::Error; });
 }
 
-auto Playlist::has_next_track() const -> bool {
+auto Tracklist::has_next_track() const -> bool {
 	if (m_tracks.empty()) { return false; }
 	return m_active + 1 < int(m_tracks.size());
 }
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-auto Playlist::get_active() -> Track* { return const_cast<Track*>(std::as_const(*this).get_active()); }
+auto Tracklist::get_active() -> Track* { return const_cast<Track*>(std::as_const(*this).get_active()); }
 
-auto Playlist::push(char const* path) -> bool {
+auto Tracklist::push(char const* path) -> bool {
 	auto const fs_path = fs::path{path};
 	if (!is_music(fs_path)) { return false; }
 	m_tracks.push_back(to_track(fs_path, m_prev_id));
@@ -49,7 +49,7 @@ auto Playlist::push(char const* path) -> bool {
 	return true;
 }
 
-auto Playlist::remove_active() -> bool {
+auto Tracklist::remove_active() -> bool {
 	if (m_active < 0) { return false; }
 	auto const it = m_tracks.begin() + std::ptrdiff_t(m_active);
 	m_tracks.erase(it);
@@ -57,18 +57,18 @@ auto Playlist::remove_active() -> bool {
 	return true;
 }
 
-void Playlist::clear() {
+void Tracklist::clear() {
 	m_tracks.clear();
 	m_active = m_cursor = -1;
 }
 
-auto Playlist::cycle_next() -> Track* {
+auto Tracklist::cycle_next() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
 	m_active = (m_active + 1) % int(m_tracks.size());
 	return &m_tracks.at(std::size_t(m_active));
 }
 
-auto Playlist::cycle_prev() -> Track* {
+auto Tracklist::cycle_prev() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
 	if (m_active <= 0) {
 		m_active = int(m_tracks.size()) - 1;
@@ -78,7 +78,7 @@ auto Playlist::cycle_prev() -> Track* {
 	return &m_tracks.at(std::size_t(m_active));
 }
 
-auto Playlist::update() -> Action {
+auto Tracklist::update() -> Action {
 	ImGui::TextUnformatted(ICON_KI_LIST);
 	auto const none_selected = m_cursor < 0;
 	if (none_selected) { ImGui::BeginDisabled(); }
@@ -94,7 +94,7 @@ auto Playlist::update() -> Action {
 	return std::exchange(m_action, Action::None);
 }
 
-void Playlist::remove_track() {
+void Tracklist::remove_track() {
 	if (ImGui::Button(ICON_KI_TIMES)) {
 		if (m_active == m_cursor) {
 			m_action = Action::Unload;
@@ -106,7 +106,7 @@ void Playlist::remove_track() {
 	}
 }
 
-void Playlist::move_track_up() {
+void Tracklist::move_track_up() {
 	auto const is_first = m_cursor == 0;
 	if (is_first) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_TOP)) {
@@ -116,7 +116,7 @@ void Playlist::move_track_up() {
 	if (is_first) { ImGui::EndDisabled(); }
 }
 
-void Playlist::move_track_down() {
+void Tracklist::move_track_down() {
 	auto const is_last = !m_tracks.empty() && m_cursor == std::int32_t(m_tracks.size() - 1);
 	if (is_last) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_BOTTOM)) {
@@ -126,8 +126,8 @@ void Playlist::move_track_down() {
 	if (is_last) { ImGui::EndDisabled(); }
 }
 
-void Playlist::track_list() {
-	ImGui::BeginChild("playlist", {}, ImGuiChildFlags_Borders);
+void Tracklist::track_list() {
+	ImGui::BeginChild("Tracklist", {}, ImGuiChildFlags_Borders);
 	for (auto const [index, track] : std::views::enumerate(m_tracks)) {
 		auto const is_now_playing = m_active == std::int32_t(index);
 		if (is_now_playing) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4{1.0f, 1.0f, 0.0f, 1.0f}); }
@@ -142,7 +142,7 @@ void Playlist::track_list() {
 	ImGui::EndChild();
 }
 
-void Playlist::swap_track_at_cursor(int const with) {
+void Tracklist::swap_track_at_cursor(int const with) {
 	if (m_cursor < 0 || with < 0) { return; }
 	auto const idx_a = std::size_t(m_cursor);
 	auto const idx_b = std::size_t(with);
