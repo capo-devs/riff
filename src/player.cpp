@@ -42,21 +42,19 @@ auto Player::load_track(Track& track) -> bool {
 	return true;
 }
 
-auto Player::update() -> Action {
+void Player::update(IMediator& mediator) {
 	m_cursor_str.clear();
 	capo::format_duration_to(m_cursor_str, Time{m_cursor});
 	if (!m_seeking) { m_cursor = std::max(m_source->get_cursor().count(), 0.0f); }
 
 	ImGui::TextUnformatted(m_title.c_str());
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-	buttons();
+	buttons(mediator);
 	sliders();
 	seekbar();
-
-	return std::exchange(m_action, Action::None);
 }
 
-void Player::buttons() {
+void Player::buttons(IMediator& mediator) {
 	ImGui::SetNextItemWidth(50.0f);
 	if (!m_source->is_bound()) { ImGui::BeginDisabled(); }
 	if (ImGui::ButtonEx(m_source->is_playing() ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT, {50.0f, 50.0f})) {
@@ -67,10 +65,13 @@ void Player::buttons() {
 		}
 	}
 
+	enum class Action : std::int8_t { None, Previous, Next };
+	auto action = Action::None;
+
 	ImGui::SameLine();
-	if (ImGui::ButtonEx(ICON_KI_STEP_BACKWARD, {30.0f, 30.0f})) { m_action = Action::Previous; }
+	if (ImGui::ButtonEx(ICON_KI_STEP_BACKWARD, {30.0f, 30.0f})) { action = Action::Previous; }
 	ImGui::SameLine();
-	if (ImGui::ButtonEx(ICON_KI_STEP_FORWARD, {30.0f, 30.0f})) { m_action = Action::Next; }
+	if (ImGui::ButtonEx(ICON_KI_STEP_FORWARD, {30.0f, 30.0f})) { action = Action::Next; }
 	if (!m_source->is_bound()) { ImGui::EndDisabled(); }
 
 	ImGui::SameLine();
@@ -79,6 +80,12 @@ void Player::buttons() {
 	if (ImGui::ButtonEx(repeat_icon, {30.0f, 30.0f})) {
 		m_repeat = Repeat((int(m_repeat) + 1) % int(Repeat::COUNT_));
 		m_source->set_looping(m_repeat == Repeat::One);
+	}
+
+	switch (action) {
+	case Action::None: break;
+	case Action::Previous: mediator.skip_prev(); break;
+	case Action::Next: mediator.skip_next(); break;
 	}
 }
 

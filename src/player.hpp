@@ -1,12 +1,17 @@
 #pragma once
 #include <capo/source.hpp>
+#include <klib/base_types.hpp>
 #include <track.hpp>
 
 namespace riff {
 class Player {
   public:
-	enum class Action : std::int8_t { None, Previous, Next };
 	enum class Repeat : std::int8_t { None, One, All, COUNT_ };
+
+	struct IMediator : klib::Polymorphic {
+		virtual void skip_prev() = 0;
+		virtual void skip_next() = 0;
+	};
 
 	explicit Player(std::unique_ptr<capo::ISource> source);
 
@@ -30,12 +35,12 @@ class Player {
 
 	[[nodiscard]] auto get_repeat() const -> Repeat { return m_repeat; }
 
-	auto update() -> Action;
+	void update(IMediator& mediator);
 
   private:
 	static constexpr std::string_view blank_title_v{"[none]"};
 
-	void buttons();
+	void buttons(IMediator& mediator);
 	void sliders();
 	void seekbar();
 
@@ -49,7 +54,5 @@ class Player {
 	bool m_seeking{};
 
 	Repeat m_repeat{Repeat::None};
-
-	Action m_action{Action::None};
 };
 } // namespace riff

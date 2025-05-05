@@ -3,7 +3,6 @@
 #include <build_version.hpp>
 #include <embedded.hpp>
 #include <klib/version_str.hpp>
-#include <klib/visitor.hpp>
 #include <log.hpp>
 
 namespace riff {
@@ -43,6 +42,36 @@ void App::run() {
 		update();
 		m_context->render();
 	}
+}
+
+auto App::play_track(Track& track) -> bool {
+	if (!load_track(track)) { return false; }
+	if (!m_player->is_playing()) {
+		m_player->play();
+		m_playing = m_player->is_playing();
+	}
+	return true;
+}
+
+void App::unload_active() {
+	m_player->unload_track();
+	m_playing = false;
+}
+
+void App::skip_prev() {
+	auto const is_playing = m_player->is_playing();
+	if (is_playing && m_player->get_cursor() > 3s) {
+		m_player->set_cursor(0s);
+		return;
+	}
+	if (!cycle([this] { return m_tracklist.cycle_prev(); })) { return; }
+	if (is_playing && !m_player->is_playing()) { m_player->play(); }
+}
+
+void App::skip_next() {
+	auto const is_playing = m_player->is_playing();
+	cycle([this] { return m_tracklist.cycle_next(); });
+	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
 void App::create_engine() {
@@ -97,47 +126,15 @@ void App::update() {
 	static constexpr auto flags_v =
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 	if (ImGui::Begin("main", nullptr, flags_v)) {
-		update_player();
+		if (m_playing && m_player->at_end()) { advance(); }
+		m_player->update(*this);
+		m_playing = m_player->is_playing();
+
 		ImGui::Separator();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-		update_tracklist();
+		m_tracklist.update(*this);
 	}
 	ImGui::End();
-}
-
-void App::update_player() {
-	if (m_playing && m_player->at_end()) { advance(); }
-	m_playing = m_player->is_playing();
-
-	auto const action = m_player->update();
-	switch (action) {
-	case Player::Action::None: break;
-	case Player::Action::Previous: on_prev(); break;
-	case Player::Action::Next: on_next(); break;
-	default: break;
-	}
-}
-
-void App::update_tracklist() {
-	auto const action = m_tracklist.update();
-	auto const visitor = klib::Visitor{
-		[](std::monostate) {},
-		[this](Tracklist::PlayTrack const play_track) {
-			auto* track = m_tracklist.get_track(play_track.index);
-			if (track == nullptr) { return; }
-			if (!load_track(*track)) {
-				m_tracklist.set_active(-1);
-				return;
-			}
-			m_tracklist.set_active(play_track.index);
-			if (!m_player->is_playing()) { m_player->play(); }
-		},
-		[this](Tracklist::UnloadTrack) {
-			m_player->unload_track();
-			m_playing = false;
-		},
-	};
-	std::visit(visitor, action);
 }
 
 template <typename F>
@@ -168,22 +165,6 @@ auto App::load_track(Track& track) -> bool {
 	if (m_player->load_track(track)) { return true; }
 	log.error("failed to load track: {}", track.path);
 	return false;
-}
-
-void App::on_prev() {
-	auto const is_playing = m_player->is_playing();
-	if (is_playing && m_player->get_cursor() > 3s) {
-		m_player->set_cursor(0s);
-		return;
-	}
-	if (!cycle([this] { return m_tracklist.cycle_prev(); })) { return; }
-	if (is_playing && !m_player->is_playing()) { m_player->play(); }
-}
-
-void App::on_next() {
-	auto const is_playing = m_player->is_playing();
-	cycle([this] { return m_tracklist.cycle_next(); });
-	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
 void App::on_drop(std::span<char const* const> paths) {
