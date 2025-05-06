@@ -4,10 +4,12 @@
 
 [![Build Status](https://github.com/capo-devs/riff/actions/workflows/ci.yml/badge.svg)](https://github.com/capo-devs/riff/actions/workflows/ci.yml)
 
+![Screenshot_20250505_222941](https://github.com/user-attachments/assets/3a21784d-3785-4a21-ac19-e60a32932dcc)
+
 ## Requirements
 
 - C++23 compiler (and standard library)
-- CMake 3.24+
+- CMake 3.23+
 
 ## Supported encoding formats
 
