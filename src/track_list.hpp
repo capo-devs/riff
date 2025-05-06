@@ -2,18 +2,17 @@
 #include <klib/base_types.hpp>
 #include <track.hpp>
 #include <cstdint>
-#include <span>
-#include <vector>
+#include <list>
 
 namespace riff {
-class Tracklist {
+class Tracklist : public klib::Pinned {
   public:
 	struct IMediator : klib::Polymorphic {
 		virtual auto play_track(Track& track) -> bool = 0;
 		virtual void unload_active() = 0;
 	};
 
-	[[nodiscard]] auto get_tracks() const -> std::span<Track const> { return m_tracks; }
+	[[nodiscard]] auto is_empty() const -> bool { return m_tracks.empty(); }
 	[[nodiscard]] auto has_playable_track() const -> bool;
 	[[nodiscard]] auto has_next_track() const -> bool;
 
@@ -26,15 +25,17 @@ class Tracklist {
 	void update(IMediator& mediator);
 
   private:
+	using It = std::list<Track>::iterator;
+
 	void remove_track(IMediator& mediator);
 	void move_track_up();
 	void move_track_down();
 	void track_list(IMediator& mediator);
-	void swap_track_at_cursor(int with);
+	void swap_with_cursor(It it);
 
-	std::vector<Track> m_tracks{};
+	std::list<Track> m_tracks{};
 	std::uint64_t m_prev_id{};
-	int m_cursor{-1};
-	int m_active{-1};
+	It m_cursor{m_tracks.end()};
+	It m_active{m_tracks.end()};
 };
 } // namespace riff

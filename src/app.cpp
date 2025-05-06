@@ -168,7 +168,7 @@ auto App::load_track(Track& track) -> bool {
 }
 
 void App::on_drop(std::span<char const* const> paths) {
-	auto const was_empty = m_tracklist.get_tracks().empty();
+	auto const was_empty = m_tracklist.is_empty();
 	for (auto const* path : paths) {
 		if (!m_tracklist.push(path)) {
 			log.info("skipping non-music file: {}", path);

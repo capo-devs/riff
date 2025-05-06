@@ -21,7 +21,8 @@ constexpr auto repeat_icon_v = klib::EnumArray<Player::Repeat, char const*>{
 
 Player::Player(std::unique_ptr<capo::ISource> source) : m_source(std::move(source)) {
 	assert(m_source);
-	m_duration_str = m_cursor_str = duration_0_str;
+	m_cursor_str = duration_0_str;
+	m_duration_str = duration_0_str.c_str();
 }
 
 auto Player::load_track(Track& track) -> bool {
@@ -30,22 +31,32 @@ auto Player::load_track(Track& track) -> bool {
 		track.status = Track::Status::Error;
 		return false;
 	}
-	m_title = track.name;
+
 	track.status = Track::Status::Ok;
 	track.duration = m_source->get_duration();
-	m_duration_str.clear();
-	capo::format_duration_to(m_duration_str, track.duration);
 	track.duration_label.clear();
-	track.duration_label.append(m_duration_str);
+	capo::format_duration_to(track.duration_label, track.duration);
+
+	m_title = track.name.c_str();
+	m_duration_str = track.duration_label.c_str();
 	m_seeking = false;
+
 	if (was_playing) { play(); }
 	return true;
 }
 
+void Player::unload_track() {
+	m_source->unbind();
+
+	m_title = blank_title_v.data();
+	m_duration_str = duration_0_str.c_str();
+	m_seeking = false;
+}
+
 void Player::update(IMediator& mediator) {
+	if (!m_seeking) { m_cursor = std::max(m_source->get_cursor().count(), 0.0f); }
 	m_cursor_str.clear();
 	capo::format_duration_to(m_cursor_str, Time{m_cursor});
-	if (!m_seeking) { m_cursor = std::max(m_source->get_cursor().count(), 0.0f); }
 
 	ImGui::TextUnformatted(m_title.c_str());
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);

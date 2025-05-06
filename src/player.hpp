@@ -1,6 +1,7 @@
 #pragma once
 #include <capo/source.hpp>
 #include <klib/base_types.hpp>
+#include <klib/c_string.hpp>
 #include <track.hpp>
 
 namespace riff {
@@ -26,7 +27,7 @@ class Player {
 
 	[[nodiscard]] auto is_track_loaded() const -> bool { return m_source->is_bound(); }
 	auto load_track(Track& track) -> bool;
-	void unload_track() { m_source->unbind(); }
+	void unload_track();
 
 	[[nodiscard]] auto at_end() const -> bool { return m_source->at_end(); }
 	[[nodiscard]] auto is_playing() const -> bool { return m_source->is_playing(); }
@@ -46,8 +47,8 @@ class Player {
 
 	std::unique_ptr<capo::ISource> m_source{};
 
-	std::string m_title{blank_title_v};
-	std::string m_duration_str{};
+	klib::CString m_title{blank_title_v.data()};
+	klib::CString m_duration_str{};
 
 	float m_cursor{};
 	std::string m_cursor_str{};
