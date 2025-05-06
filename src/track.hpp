@@ -9,6 +9,8 @@ struct Track {
 
 	std::string path{};
 	std::string name{};
+	std::string label{};
+	std::string duration_label{};
 	Time duration{};
 	Status status{Status::None};
 };
