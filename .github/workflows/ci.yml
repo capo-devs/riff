@@ -1,0 +1,98 @@
+name: ci-pr
+on: 
+  pull_request
+jobs:
+  x64-linux-gcc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: uname -m; sudo apt update -yqq && sudo apt install -yqq ninja-build mesa-common-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
+      - name: configure
+        run: export CXX=g++-14; cmake -S . --preset=default -B build -DGLFW_BUILD_X11=OFF
+      - name: build debug
+        run: cmake --build build --config=Debug
+      - name: build release
+        run: cmake --build build --config=Release
+      - name: test debug
+        run: cd build && ctest -V -C Debug
+      - name: test release
+        run: cd build && ctest -V -C Release
+  x64-linux-clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: uname -m; sudo apt update -yqq && sudo apt install -yqq ninja-build mesa-common-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
+      - name: configure
+        run: cmake -S . --preset=ninja-clang -B build -DGLFW_BUILD_X11=OFF
+      - name: build debug
+        run: cmake --build build --config=Debug
+      - name: build release
+        run: cmake --build build --config=Release
+      - name: test debug
+        run: cd build && ctest -V -C Debug
+      - name: test release
+        run: cd build && ctest -V -C Release
+  arm64-linux-gcc:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: uname -m; sudo apt update -yqq && sudo apt install -yqq ninja-build mesa-common-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
+      - name: configure
+        run: export CXX=g++-14; cmake -S . --preset=default -B build -DGLFW_BUILD_X11=OFF
+      - name: build debug
+        run: cmake --build build --config=Debug
+      - name: build release
+        run: cmake --build build --config=Release
+      - name: test debug
+        run: cd build && ctest -V -C Debug
+      - name: test release
+        run: cd build && ctest -V -C Release
+  arm64-linux-clang:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: uname -m; sudo apt update -yqq && sudo apt install -yqq ninja-build mesa-common-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
+      - name: configure
+        run: cmake -S . --preset=ninja-clang -B build -DGLFW_BUILD_X11=OFF
+      - name: build debug
+        run: cmake --build build --config=Debug
+      - name: build release
+        run: cmake --build build --config=Release
+      - name: test debug
+        run: cd build && ctest -V -C Debug
+      - name: test release
+        run: cd build && ctest -V -C Release
+  x64-windows-vs22:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: configure
+        run: cmake -S . --preset=vs22 -B build
+      - name: build debug
+        run: cmake --build build --config=Debug --parallel
+      - name: build release
+        run: cmake --build build --config=Release --parallel
+      - name: test debug
+        run: cd build && ctest -V -C Debug
+      - name: test release
+        run: cd build && ctest -V -C Release
+  x64-windows-clang:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: init
+        run: choco install ninja
+      - name: configure
+        run: cmake -S . --preset=ninja-clang -B clang
+      - name: build debug
+        run: cmake --build clang --config=Debug
+      - name: build release
+        run: cmake --build clang --config=Release
+      - name: test debug
+        run: cd clang && ctest -V -C Debug
+      - name: test release
+        run: cd clang && ctest -V -C Release
