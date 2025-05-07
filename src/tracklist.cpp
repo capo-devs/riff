@@ -1,11 +1,10 @@
 #include <IconsKenney.h>
 #include <imgui.h>
-#include <track_list.hpp>
+#include <tracklist.hpp>
 #include <util.hpp>
 #include <algorithm>
 #include <array>
 #include <filesystem>
-#include <ranges>
 #include <utility>
 
 namespace riff {
@@ -34,8 +33,8 @@ auto Tracklist::has_next_track() const -> bool {
 	return std::next(m_active) != m_tracks.end();
 }
 
-auto Tracklist::push(char const* path) -> bool {
-	auto const fs_path = fs::path{path};
+auto Tracklist::push(klib::CString const path) -> bool {
+	auto const fs_path = fs::path{path.as_view()};
 	if (!is_music(fs_path)) { return false; }
 	m_tracks.push_back(to_track(fs_path, m_prev_id));
 	return true;

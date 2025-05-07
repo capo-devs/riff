@@ -1,5 +1,6 @@
 #pragma once
 #include <klib/base_types.hpp>
+#include <klib/c_string.hpp>
 #include <track.hpp>
 #include <cstdint>
 #include <list>
@@ -16,7 +17,7 @@ class Tracklist : public klib::Pinned {
 	[[nodiscard]] auto has_playable_track() const -> bool;
 	[[nodiscard]] auto has_next_track() const -> bool;
 
-	auto push(char const* path) -> bool;
+	auto push(klib::CString path) -> bool;
 	void clear();
 
 	auto cycle_next() -> Track*;

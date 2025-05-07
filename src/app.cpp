@@ -33,6 +33,7 @@ struct ImFontLoader {
 } // namespace
 
 void App::run() {
+	m_config.load();
 	create_engine();
 	create_player();
 	create_context();
@@ -84,9 +85,9 @@ void App::create_player() {
 	if (!source) { throw std::runtime_error{"Failed to create Audio Source"}; }
 
 	m_player.emplace(std::move(source));
-	// TODO: saved state
-	m_player->set_volume(100);
-	m_player->set_balance(0.0f);
+	m_player->set_volume(m_config.get_volume());
+	m_player->set_balance(m_config.get_balance());
+	m_player->set_repeat(m_config.get_repeat());
 }
 
 void App::create_context() {
@@ -135,6 +136,15 @@ void App::update() {
 		m_tracklist.update(*this);
 	}
 	ImGui::End();
+
+	update_config();
+}
+
+void App::update_config() {
+	m_config.set_volume(m_player->get_volume());
+	m_config.set_balance(m_player->get_balance());
+	m_config.set_repeat(m_player->get_repeat());
+	m_config.update();
 }
 
 template <typename F>
@@ -154,7 +164,7 @@ auto App::cycle(Pred pred, F get_track) -> bool {
 
 void App::advance() {
 	auto const pred = [this] {
-		return (m_player->get_repeat() == Player::Repeat::All || m_tracklist.has_next_track()) &&
+		return (m_player->get_repeat() == Repeat::All || m_tracklist.has_next_track()) &&
 			   m_tracklist.has_playable_track();
 	};
 	if (!cycle(pred, [this] { return m_tracklist.cycle_next(); })) { return; }

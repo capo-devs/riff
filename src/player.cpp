@@ -12,7 +12,7 @@ namespace riff {
 namespace {
 auto const duration_0_str = capo::format_duration(0s);
 
-constexpr auto repeat_icon_v = klib::EnumArray<Player::Repeat, char const*>{
+constexpr auto repeat_icon_v = klib::EnumArray<Repeat, klib::CString>{
 	ICON_KI_MINUS,
 	ICON_KI_MOVE_RL_ALT,
 	ICON_KI_STICK_MOVE_RL_ALT,
@@ -23,6 +23,11 @@ Player::Player(std::unique_ptr<capo::ISource> source) : m_source(std::move(sourc
 	assert(m_source);
 	m_cursor_str = duration_0_str;
 	m_duration_str = duration_0_str.c_str();
+}
+
+void Player::set_repeat(Repeat const repeat) {
+	m_repeat = repeat;
+	m_source->set_looping(m_repeat == Repeat::One);
 }
 
 auto Player::load_track(Track& track) -> bool {
@@ -87,10 +92,9 @@ void Player::buttons(IMediator& mediator) {
 
 	ImGui::SameLine();
 	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x);
-	auto const* repeat_icon = repeat_icon_v[m_repeat];
-	if (ImGui::ButtonEx(repeat_icon, {30.0f, 30.0f})) {
-		m_repeat = Repeat((int(m_repeat) + 1) % int(Repeat::COUNT_));
-		m_source->set_looping(m_repeat == Repeat::One);
+	auto const repeat_icon = repeat_icon_v[m_repeat];
+	if (ImGui::ButtonEx(repeat_icon.c_str(), {30.0f, 30.0f})) {
+		set_repeat(Repeat((int(m_repeat) + 1) % int(Repeat::COUNT_)));
 	}
 
 	switch (action) {
