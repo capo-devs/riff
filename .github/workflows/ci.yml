@@ -1,5 +1,5 @@
 name: ci-pr
-on: 
+on:
   pull_request
 jobs:
   x64-linux-gcc:
