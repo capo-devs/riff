@@ -30,7 +30,9 @@ auto Tracklist::has_playable_track() const -> bool {
 
 auto Tracklist::has_next_track() const -> bool {
 	if (m_tracks.empty()) { return false; }
-	return std::next(m_active) != m_tracks.end();
+	if (is_inactive()) { return true; }
+	if (!is_last()) { return true; }
+	return false;
 }
 
 auto Tracklist::push(klib::CString const path) -> bool {
@@ -47,14 +49,17 @@ void Tracklist::clear() {
 
 auto Tracklist::cycle_next() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
-	++m_active;
-	if (m_active == m_tracks.end()) { m_active = m_tracks.begin(); }
+	if (is_inactive() || is_last()) {
+		m_active = m_tracks.begin();
+	} else {
+		++m_active;
+	}
 	return &*m_active;
 }
 
 auto Tracklist::cycle_prev() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
-	if (m_active == m_tracks.begin()) { m_active = m_tracks.end(); }
+	if (is_first()) { m_active = m_tracks.end(); }
 	--m_active;
 	return &*m_active;
 }
@@ -71,6 +76,15 @@ void Tracklist::update(IMediator& mediator) {
 	move_track_down();
 	if (none_selected) { ImGui::EndDisabled(); }
 	track_list(mediator);
+}
+
+auto Tracklist::is_inactive() const -> bool { return m_active == m_tracks.end(); }
+
+auto Tracklist::is_first() const -> bool { return m_active == m_tracks.begin(); }
+
+auto Tracklist::is_last() const -> bool {
+	assert(is_inactive());
+	return std::next(m_active) == m_tracks.end();
 }
 
 void Tracklist::remove_track(IMediator& mediator) {
@@ -129,7 +143,7 @@ void Tracklist::track_list(IMediator& mediator) {
 }
 
 void Tracklist::swap_with_cursor(It const it) {
-	assert(m_cursor != m_tracks.end() && it != m_tracks.end());
+	assert(m_tracks.size() > 1 && m_cursor != m_tracks.end() && it != m_tracks.end());
 	if (m_active == it) {
 		m_active = m_cursor;
 	} else if (m_active == m_cursor) {

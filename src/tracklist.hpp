@@ -28,6 +28,10 @@ class Tracklist : public klib::Pinned {
   private:
 	using It = std::list<Track>::iterator;
 
+	[[nodiscard]] auto is_inactive() const -> bool;
+	[[nodiscard]] auto is_first() const -> bool;
+	[[nodiscard]] auto is_last() const -> bool;
+
 	void remove_track(IMediator& mediator);
 	void move_track_up();
 	void move_track_down();
