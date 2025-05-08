@@ -83,7 +83,7 @@ auto Tracklist::is_inactive() const -> bool { return m_active == m_tracks.end();
 auto Tracklist::is_first() const -> bool { return m_active == m_tracks.begin(); }
 
 auto Tracklist::is_last() const -> bool {
-	assert(is_inactive());
+	assert(!is_inactive());
 	return std::next(m_active) == m_tracks.end();
 }
 
@@ -98,17 +98,17 @@ void Tracklist::remove_track(IMediator& mediator) {
 }
 
 void Tracklist::move_track_up() {
-	auto const is_first = m_cursor == m_tracks.begin();
-	if (is_first) { ImGui::BeginDisabled(); }
+	auto const on_first_track = is_first();
+	if (on_first_track) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_TOP)) { swap_with_cursor(std::prev(m_cursor)); }
-	if (is_first) { ImGui::EndDisabled(); }
+	if (on_first_track) { ImGui::EndDisabled(); }
 }
 
 void Tracklist::move_track_down() {
-	auto const is_last = !m_tracks.empty() && std::next(m_cursor) == m_tracks.end();
-	if (is_last) { ImGui::BeginDisabled(); }
+	auto const on_last_track = !is_inactive() && is_last();
+	if (on_last_track) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_BOTTOM)) { swap_with_cursor(std::next(m_cursor)); }
-	if (is_last) { ImGui::EndDisabled(); }
+	if (on_last_track) { ImGui::EndDisabled(); }
 }
 
 void Tracklist::track_list(IMediator& mediator) {
@@ -142,7 +142,7 @@ void Tracklist::track_list(IMediator& mediator) {
 	}
 }
 
-void Tracklist::swap_with_cursor(It const it) {
+void Tracklist::swap_with_cursor(It const& it) {
 	assert(m_tracks.size() > 1 && m_cursor != m_tracks.end() && it != m_tracks.end());
 	if (m_active == it) {
 		m_active = m_cursor;

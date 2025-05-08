@@ -36,7 +36,7 @@ class Tracklist : public klib::Pinned {
 	void move_track_up();
 	void move_track_down();
 	void track_list(IMediator& mediator);
-	void swap_with_cursor(It it);
+	void swap_with_cursor(It const& it);
 
 	std::list<Track> m_tracks{};
 	std::uint64_t m_prev_id{};
