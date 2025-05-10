@@ -1,8 +1,9 @@
 #pragma once
 #include <capo/engine.hpp>
+#include <config.hpp>
 #include <gvdi/context.hpp>
 #include <player.hpp>
-#include <track_list.hpp>
+#include <tracklist.hpp>
 #include <optional>
 
 namespace riff {
@@ -24,6 +25,7 @@ class App : public Tracklist::IMediator, public Player::IMediator {
 
 	void on_drop(std::span<char const* const> paths);
 	void update();
+	void update_config();
 
 	template <typename F>
 	auto cycle(F get_track) -> bool;
@@ -36,6 +38,7 @@ class App : public Tracklist::IMediator, public Player::IMediator {
 
 	static void install_callbacks(GLFWwindow* window);
 
+	Config m_config{};
 	std::unique_ptr<capo::IEngine> m_engine{};
 	std::optional<Player> m_player{};
 	std::optional<gvdi::Context> m_context{};

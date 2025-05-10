@@ -1,5 +1,5 @@
 #pragma once
-#include <klib/version.hpp>
+#include <klib/version_str.hpp>
 
 namespace riff {
 inline constexpr auto build_version_v = klib::Version{
@@ -7,4 +7,6 @@ inline constexpr auto build_version_v = klib::Version{
 	.minor= @PROJECT_VERSION_MINOR@,
 	.patch = @PROJECT_VERSION_PATCH@,
 };
+
+auto const build_version_str = std::format("{}", build_version_v);
 } // namespace riff
