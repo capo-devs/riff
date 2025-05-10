@@ -23,8 +23,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   gvdi::gvdi
   capo::capo
   klib::klib
-  capo::warnings
-  klib::klib-ndwerror
   icons::kenny
 )
 

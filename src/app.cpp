@@ -91,7 +91,7 @@ void App::create_player() {
 }
 
 void App::create_context() {
-	auto const title = std::format("riff {}", klib::to_string(build_version_v));
+	auto const title = std::format("riff {}", build_version_str);
 	auto window = gvdi::Context::create_window({500.0f, 350.0f}, title.c_str());
 	if (!window) { throw std::runtime_error{"Failed to create Window"}; }
 
