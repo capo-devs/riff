@@ -4,6 +4,7 @@
 #include <embedded.hpp>
 #include <klib/version_str.hpp>
 #include <log.hpp>
+#include <utility>
 
 namespace riff {
 namespace {

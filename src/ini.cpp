@@ -3,6 +3,7 @@
 #include <cassert>
 #include <format>
 #include <fstream>
+#include <vector>
 
 namespace riff {
 namespace {
