@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(riff VERSION "0.1.0")
+project(riff VERSION "0.1.1")
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,8 +23,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   gvdi::gvdi
   capo::capo
   klib::klib
-  capo::warnings
-  klib::klib-ndwerror
   icons::kenny
 )
 

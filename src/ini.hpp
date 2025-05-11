@@ -1,14 +1,15 @@
 #pragma once
+#include <klib/c_string.hpp>
 #include <klib/concepts.hpp>
 #include <charconv>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace riff {
 class Ini {
   public:
-	[[nodiscard]] auto load(char const* path) -> bool;
+	[[nodiscard]] auto load(klib::CString path) -> bool;
+	[[nodiscard]] auto save(klib::CString path) const -> bool;
 
 	[[nodiscard]] auto get_value(std::string_view key, std::string_view fallback = {}) const -> std::string_view;
 
@@ -29,8 +30,6 @@ class Ini {
 	}
 
 	void set_value(std::string key, std::string value) { m_map.insert_or_assign(std::move(key), std::move(value)); }
-
-	[[nodiscard]] auto serialize() const -> std::vector<std::string>;
 
   private:
 	struct Hash : std::hash<std::string_view> {
