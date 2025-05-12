@@ -2,8 +2,8 @@
 #include <app.hpp>
 #include <build_version.hpp>
 #include <embedded.hpp>
-#include <klib/version_str.hpp>
 #include <log.hpp>
+#include <array>
 #include <utility>
 
 namespace riff {
@@ -33,8 +33,9 @@ struct ImFontLoader {
 };
 } // namespace
 
-void App::run() {
-	m_config.load();
+void App::run(Params const& params) {
+	m_config.path = params.config_path;
+	m_config.load_or_create();
 	create_engine();
 	create_player();
 	create_context();

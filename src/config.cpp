@@ -1,6 +1,7 @@
 #include <config.hpp>
 #include <ini.hpp>
 #include <klib/enum_array.hpp>
+#include <log.hpp>
 #include <cmath>
 #include <format>
 
@@ -19,25 +20,36 @@ constexpr void from_str(std::string_view const in, Repeat& out) {
 } // namespace
 
 auto Config::load() -> bool {
-	auto ini = Ini{};
-	if (!ini.load(path_v)) { return false; }
-	ini.assign_to(m_volume, "volume");
-	ini.assign_to(m_balance, "balance");
-	auto repeat_ = std::string{};
-	if (ini.assign_to(repeat_, "repeat")) { from_str(repeat_, m_repeat); }
-	m_dirty = false;
-	return true;
+	if (load_silent()) {
+		log.info("loaded config from: {}", path);
+		return true;
+	}
+	log.warn("failed to load config from: {}", path);
+	return false;
 }
 
 auto Config::save() const -> bool {
-	auto ini = Ini{};
-	ini.set_value("volume", std::format("{}", m_volume));
-	ini.set_value("balance", std::format("{:.1f}", m_balance));
-	ini.set_value("repeat", std::string{repeat_str_v[m_repeat]});
-	if (!ini.save(path_v)) { return false; }
-	m_dirty = false;
-	m_last_save = Clock::now();
-	return true;
+	if (save_silent()) {
+		log.info("config saved to: {}", path);
+		return true;
+	}
+	log.warn("failed to save config to: {}", path);
+	return false;
+}
+
+auto Config::load_or_create() -> bool {
+	if (load_silent()) {
+		log.info("loaded config from: {}", path);
+		return true;
+	}
+
+	if (save_silent()) {
+		log.info("created config at: {}", path);
+		return true;
+	}
+
+	log.warn("failed to create config at: {}", path);
+	return false;
 }
 
 void Config::set_volume(int const volume) {
@@ -63,5 +75,27 @@ void Config::update() {
 	auto const now = Clock::now();
 	if (now - m_last_save < save_debounce_v) { return; }
 	save();
+}
+
+auto Config::load_silent() -> bool {
+	auto ini = Ini{};
+	if (!ini.load(path.c_str())) { return false; }
+	ini.assign_to(m_volume, "volume");
+	ini.assign_to(m_balance, "balance");
+	auto repeat_ = std::string{};
+	if (ini.assign_to(repeat_, "repeat")) { from_str(repeat_, m_repeat); }
+	m_dirty = false;
+	return true;
+}
+
+auto Config::save_silent() const -> bool {
+	auto ini = Ini{};
+	ini.set_value("volume", std::format("{}", m_volume));
+	ini.set_value("balance", std::format("{:.1f}", m_balance));
+	ini.set_value("repeat", std::string{repeat_str_v[m_repeat]});
+	if (!ini.save(path.c_str())) { return false; }
+	m_dirty = false;
+	m_last_save = Clock::now();
+	return true;
 }
 } // namespace riff

@@ -7,9 +7,13 @@
 #include <optional>
 
 namespace riff {
+struct Params {
+	std::string_view config_path{"riff.conf"};
+};
+
 class App : public Tracklist::IMediator, public Player::IMediator {
   public:
-	void run();
+	void run(Params const& params);
 
   private:
 	auto play_track(Track& track) -> bool final;

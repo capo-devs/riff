@@ -7,7 +7,6 @@ namespace riff {
 class Config {
   public:
 	static constexpr auto save_debounce_v{1s};
-	static constexpr auto path_v = klib::CString{"riff.conf"};
 
 	Config(Config const&) = delete;
 	Config(Config&&) = delete;
@@ -19,6 +18,7 @@ class Config {
 
 	auto load() -> bool;
 	auto save() const -> bool;
+	auto load_or_create() -> bool;
 
 	[[nodiscard]] auto get_volume() const -> int { return m_volume; }
 	void set_volume(int volume);
@@ -31,7 +31,12 @@ class Config {
 
 	void update();
 
+	std::string path{"riff.conf"};
+
   private:
+	auto load_silent() -> bool;
+	auto save_silent() const -> bool;
+
 	int m_volume{100};
 	float m_balance{0.0f};
 	Repeat m_repeat{Repeat::None};
