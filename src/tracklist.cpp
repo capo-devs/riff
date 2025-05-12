@@ -1,5 +1,6 @@
 #include <IconsKenney.h>
 #include <imgui.h>
+#include <playlist.hpp>
 #include <tracklist.hpp>
 #include <util.hpp>
 #include <algorithm>
@@ -11,16 +12,20 @@ namespace riff {
 namespace {
 namespace fs = std::filesystem;
 
+enum class FileType : std::int8_t { Unknown, Music, Playlist };
+
+[[nodiscard]] constexpr auto get_file_type(std::string_view const extension) {
+	static constexpr auto music_v = std::array{".wav", ".mp3", ".flac"};
+	if (std::ranges::find(music_v, extension) != music_v.end()) { return FileType::Music; }
+	static constexpr auto playlist_v = std::array{".m3u", ".m3u8"};
+	if (std::ranges::find(playlist_v, extension) != playlist_v.end()) { return FileType::Playlist; }
+	return FileType::Unknown;
+}
+
 [[nodiscard]] auto to_track(fs::path const& path, std::uint64_t& out_prev_id) {
 	auto ret = Track{.path = path.generic_string(), .name = path.filename().generic_string()};
 	ret.label = std::format("{}##{}", ret.name, ++out_prev_id);
 	return ret;
-}
-
-[[nodiscard]] auto is_music(fs::path const& path) {
-	static constexpr auto extensions_v = std::array{".wav", ".mp3", ".flac"};
-	auto const extension = path.extension().generic_string();
-	return std::ranges::find(extensions_v, extension) != extensions_v.end();
 }
 } // namespace
 
@@ -35,16 +40,26 @@ auto Tracklist::has_next_track() const -> bool {
 	return false;
 }
 
-auto Tracklist::push(klib::CString const path) -> bool {
-	auto const fs_path = fs::path{path.as_view()};
-	if (!is_music(fs_path)) { return false; }
-	m_tracks.push_back(to_track(fs_path, m_prev_id));
-	return true;
+auto Tracklist::push(std::string_view const path) -> bool {
+	auto const extension = fs::path{path}.extension().generic_string();
+	switch (get_file_type(extension)) {
+	case FileType::Music: append_track(path); return true;
+	case FileType::Playlist: return append_playlist(path);
+	default: return false;
+	}
 }
 
 void Tracklist::clear() {
 	m_tracks.clear();
 	m_active = m_cursor = m_tracks.end();
+}
+
+auto Tracklist::save_playlist(std::string_view const path) const -> bool {
+	if (m_tracks.empty() || path.empty()) { return false; }
+	auto playlist = Playlist{};
+	playlist.paths.reserve(m_tracks.size());
+	for (auto const& track : m_tracks) { playlist.paths.push_back(track.path); }
+	return playlist.save_to(path);
 }
 
 auto Tracklist::cycle_next() -> Track* {
@@ -75,6 +90,11 @@ void Tracklist::update(IMediator& mediator) {
 	ImGui::SameLine();
 	move_track_down();
 	if (none_selected) { ImGui::EndDisabled(); }
+	auto const is_empty = m_tracks.empty();
+	if (is_empty) { ImGui::BeginDisabled(); }
+	ImGui::SameLine();
+	if (ImGui::Button(ICON_KI_SAVE)) { mediator.on_save(); }
+	if (is_empty) { ImGui::EndDisabled(); }
 	track_list(mediator);
 }
 
@@ -85,6 +105,18 @@ auto Tracklist::is_first() const -> bool { return m_active == m_tracks.begin(); 
 auto Tracklist::is_last() const -> bool {
 	assert(!is_inactive());
 	return std::next(m_active) == m_tracks.end();
+}
+
+auto Tracklist::append_playlist(std::string_view const path) -> bool {
+	auto playlist = Playlist{};
+	if (!playlist.append_from(path)) { return false; }
+	for (auto const& path : playlist.paths) { append_track(path); }
+	return true;
+}
+
+void Tracklist::append_track(std::string_view const path) {
+	auto const fs_path = fs::absolute(path);
+	m_tracks.push_back(to_track(fs_path, m_prev_id));
 }
 
 void Tracklist::remove_track(IMediator& mediator) {

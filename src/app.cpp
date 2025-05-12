@@ -41,6 +41,8 @@ void App::run(Params const& params) {
 	create_context();
 	setup_imgui();
 
+	m_save_playlist.path.set_text("playlist.m3u");
+
 	while (m_context->next_frame()) {
 		update();
 		m_context->render();
@@ -76,6 +78,8 @@ void App::skip_next() {
 	cycle([this] { return m_tracklist.cycle_next(); });
 	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
+
+void App::on_save() { ImGui::OpenPopup(SavePlaylist::label_v.c_str()); }
 
 void App::create_engine() {
 	m_engine = capo::create_engine();
@@ -137,6 +141,7 @@ void App::update() {
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
 		m_tracklist.update(*this);
 	}
+	if (m_save_playlist.update()) { save_playlist(m_save_playlist.path.as_view()); }
 	ImGui::End();
 
 	update_config();
@@ -147,6 +152,15 @@ void App::update_config() {
 	m_config.set_balance(m_player->get_balance());
 	m_config.set_repeat(m_player->get_repeat());
 	m_config.update();
+}
+
+void App::save_playlist(std::string_view const path) {
+	if (m_tracklist.save_playlist(path)) {
+		log.info("playlist saved to: {}", path);
+		return;
+	}
+
+	log.warn("failed to save playlist to: {}", path);
 }
 
 template <typename F>
@@ -195,5 +209,24 @@ void App::install_callbacks(GLFWwindow* window) {
 	glfwSetDropCallback(window, [](GLFWwindow* window, int count, char const** paths) {
 		self(window).on_drop({paths, std::size_t(count)});
 	});
+}
+
+auto App::SavePlaylist::update() -> bool {
+	auto ret = false;
+	if (imcpp::begin_modal(label_v)) {
+		path.update("path");
+		ImGui::Separator();
+		auto const is_empty = path.as_view().empty();
+		if (is_empty) { ImGui::BeginDisabled(); }
+		if (ImGui::Button("Save")) {
+			ret = true;
+			ImGui::CloseCurrentPopup();
+		}
+		if (is_empty) { ImGui::EndDisabled(); }
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel")) { ImGui::CloseCurrentPopup(); }
+		ImGui::EndPopup();
+	}
+	return ret;
 }
 } // namespace riff
