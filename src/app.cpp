@@ -110,7 +110,7 @@ void App::create_context() {
 void App::setup_imgui() {
 	auto font_loader = ImFontLoader{};
 	font_loader.io.Fonts->ClearFonts();
-	if (!font_loader.load(rounded_elegance_bytes(), 14.0f)) {
+	if (!font_loader.load(rounded_elegance_bytes(), 16.0f)) {
 		log.warn("Failed to load RoundedElegance.ttf");
 		font_loader.load_default();
 	}
