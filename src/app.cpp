@@ -11,10 +11,12 @@ namespace {
 [[nodiscard]] auto self(GLFWwindow* window) -> App& { return *static_cast<App*>(glfwGetWindowUserPointer(window)); }
 
 struct ImFontLoader {
-	auto load(std::span<std::byte const> bytes, float const size, ImWchar const* glyph_ranges = {}) {
+	auto load(std::span<std::byte const> bytes, float const size, ImVec2 const offset = {},
+			  ImWchar const* glyph_ranges = {}) {
 		auto config = ImFontConfig{};
 		config.FontDataOwnedByAtlas = false;
 		config.MergeMode = std::exchange(m_merge, true);
+		config.GlyphOffset = offset;
 		if (glyph_ranges == nullptr) { glyph_ranges = io.Fonts->GetGlyphRangesDefault(); }
 		auto* data = const_cast<std::byte*>(bytes.data()); // NOLINT(cppcoreguidelines-pro-type-const-cast)
 		auto const data_size = int(bytes.size());
@@ -115,7 +117,7 @@ void App::setup_imgui() {
 		font_loader.load_default();
 	}
 	static constexpr auto glyph_ranges_v = std::array<ImWchar, 3>{ICON_MIN_KI, ICON_MAX_KI, 0};
-	if (!font_loader.load(kenny_icon_bytes(), 18.0f, glyph_ranges_v.data())) {
+	if (!font_loader.load(kenny_icon_bytes(), 18.0f, {0.0f, 3.0f}, glyph_ranges_v.data())) {
 		log.error("Failed to load KennyIcons.ttf");
 	}
 	m_context->rebuild_imgui_fonts();
