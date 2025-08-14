@@ -16,7 +16,8 @@ auto main(int argc, char** argv) -> int {
 		auto const parse_result = klib::args::parse_main(app_info, args, argc, argv);
 		if (parse_result.early_return()) { return parse_result.get_return_code(); }
 
-		riff::App{}.run(params);
+		auto app = riff::App{params};
+		app.run();
 	} catch (std::exception const& e) {
 		std::println("PANIC: {}", e.what());
 		return EXIT_FAILURE;

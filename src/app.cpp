@@ -35,20 +35,63 @@ struct ImFontLoader {
 };
 } // namespace
 
-void App::run(Params const& params) {
-	m_config.path = params.config_path;
+void App::pre_init() {
+	m_config.path = m_params.config_path;
 	m_config.load_or_create();
 	create_engine();
 	create_player();
-	create_context();
-	setup_imgui();
 
 	m_save_playlist.path.set_text("playlist.m3u");
+}
 
-	while (m_context->next_frame()) {
-		update();
-		m_context->render();
+auto App::create_window() -> GLFWwindow* {
+	auto const title = std::format("riff {}", build_version_str);
+	auto* ret = glfwCreateWindow(500, 350, title.c_str(), nullptr, nullptr);
+	if (!ret) { throw std::runtime_error{"Failed to create Window"}; }
+
+	glfwSetWindowUserPointer(ret, this);
+	install_callbacks(ret);
+
+	return ret;
+}
+
+void App::post_init() {
+	auto font_loader = ImFontLoader{};
+	font_loader.io.Fonts->ClearFonts();
+	if (!font_loader.load(rounded_elegance_bytes(), 16.0f)) {
+		log.warn("Failed to load RoundedElegance.ttf");
+		font_loader.load_default();
 	}
+	static constexpr auto glyph_ranges_v = std::array<ImWchar, 3>{ICON_MIN_KI, ICON_MAX_KI, 0};
+	if (!font_loader.load(kenny_icon_bytes(), 18.0f, {0.0f, 3.0f}, glyph_ranges_v.data())) {
+		log.error("Failed to load KennyIcons.ttf");
+	}
+
+	static constexpr auto rounding_v = 5.0f;
+	auto& style = ImGui::GetStyle();
+	style.FrameRounding = style.PopupRounding = style.TabRounding = style.ScrollbarRounding = style.ChildRounding =
+		rounding_v;
+}
+
+void App::update() {
+	auto const& viewport = *ImGui::GetMainViewport();
+	ImGui::SetNextWindowPos(viewport.WorkPos, ImGuiCond_Always);
+	ImGui::SetNextWindowSize(viewport.WorkSize);
+	static constexpr auto flags_v =
+		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+	if (ImGui::Begin("main", nullptr, flags_v)) {
+		if (m_playing && m_player->at_end()) { advance(); }
+		m_player->update(*this);
+		m_playing = m_player->is_playing();
+
+		ImGui::Separator();
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
+		m_tracklist.update(*this);
+	}
+	if (m_save_playlist.update()) { save_playlist(m_save_playlist.path.as_view()); }
+	ImGui::End();
+
+	update_config();
 }
 
 auto App::play_track(Track& track) -> bool {
@@ -96,57 +139,6 @@ void App::create_player() {
 	m_player->set_volume(m_config.get_volume());
 	m_player->set_balance(m_config.get_balance());
 	m_player->set_repeat(m_config.get_repeat());
-}
-
-void App::create_context() {
-	auto const title = std::format("riff {}", build_version_str);
-	auto window = gvdi::Context::create_window({500.0f, 350.0f}, title.c_str());
-	if (!window) { throw std::runtime_error{"Failed to create Window"}; }
-
-	glfwSetWindowUserPointer(window.get(), this);
-	install_callbacks(window.get());
-
-	m_context.emplace(std::move(window));
-}
-
-void App::setup_imgui() {
-	auto font_loader = ImFontLoader{};
-	font_loader.io.Fonts->ClearFonts();
-	if (!font_loader.load(rounded_elegance_bytes(), 16.0f)) {
-		log.warn("Failed to load RoundedElegance.ttf");
-		font_loader.load_default();
-	}
-	static constexpr auto glyph_ranges_v = std::array<ImWchar, 3>{ICON_MIN_KI, ICON_MAX_KI, 0};
-	if (!font_loader.load(kenny_icon_bytes(), 18.0f, {0.0f, 3.0f}, glyph_ranges_v.data())) {
-		log.error("Failed to load KennyIcons.ttf");
-	}
-	m_context->rebuild_imgui_fonts();
-
-	static constexpr auto rounding_v = 5.0f;
-	auto& style = ImGui::GetStyle();
-	style.FrameRounding = style.PopupRounding = style.TabRounding = style.ScrollbarRounding = style.ChildRounding =
-		rounding_v;
-}
-
-void App::update() {
-	auto const& viewport = *ImGui::GetMainViewport();
-	ImGui::SetNextWindowPos(viewport.WorkPos, ImGuiCond_Always);
-	ImGui::SetNextWindowSize(viewport.WorkSize);
-	static constexpr auto flags_v =
-		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
-	if (ImGui::Begin("main", nullptr, flags_v)) {
-		if (m_playing && m_player->at_end()) { advance(); }
-		m_player->update(*this);
-		m_playing = m_player->is_playing();
-
-		ImGui::Separator();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-		m_tracklist.update(*this);
-	}
-	if (m_save_playlist.update()) { save_playlist(m_save_playlist.path.as_view()); }
-	ImGui::End();
-
-	update_config();
 }
 
 void App::update_config() {
