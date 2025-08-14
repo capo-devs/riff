@@ -1,6 +1,7 @@
 #include <app.hpp>
 #include <build_version.hpp>
 #include <klib/args/parse.hpp>
+#include <array>
 #include <print>
 
 auto main(int argc, char** argv) -> int {
