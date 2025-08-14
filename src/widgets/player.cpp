@@ -19,7 +19,8 @@ constexpr auto repeat_icon_v = klib::EnumArray<Repeat, klib::CString>{
 };
 } // namespace
 
-Player::Player(std::unique_ptr<capo::ISource> source) : m_source(std::move(source)) {
+Player::Player(std::unique_ptr<capo::ISource> source, gsl::not_null<Events*> events)
+	: m_source(std::move(source)), m_events(events) {
 	assert(m_source);
 	m_cursor_str = duration_0_str;
 	m_duration_str = duration_0_str.c_str();
@@ -58,19 +59,19 @@ void Player::unload_track() {
 	m_seeking = false;
 }
 
-void Player::update(IMediator& mediator) {
+void Player::update() {
 	if (!m_seeking) { m_cursor = std::max(m_source->get_cursor().count(), 0.0f); }
 	m_cursor_str.clear();
 	capo::format_duration_to(m_cursor_str, Time{m_cursor});
 
 	ImGui::TextUnformatted(m_title.c_str());
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-	buttons(mediator);
+	buttons();
 	sliders();
 	seekbar();
 }
 
-void Player::buttons(IMediator& mediator) {
+void Player::buttons() {
 	ImGui::SetNextItemWidth(50.0f);
 	if (!m_source->is_bound()) { ImGui::BeginDisabled(); }
 	if (ImGui::ButtonEx(m_source->is_playing() ? ICON_KI_PAUSE : ICON_KI_CARET_RIGHT, {50.0f, 50.0f})) {
@@ -99,8 +100,8 @@ void Player::buttons(IMediator& mediator) {
 
 	switch (action) {
 	case Action::None: break;
-	case Action::Previous: mediator.skip_prev(); break;
-	case Action::Next: mediator.skip_next(); break;
+	case Action::Previous: m_events->skip_prev(); break;
+	case Action::Next: m_events->skip_next(); break;
 	}
 }
 

@@ -4,6 +4,9 @@ if(RIFF_MA_DEBUG_OUTPUT)
   set(CAPO_MA_DEBUG_OUTPUT ON)
 endif()
 
+message(STATUS "[gsl]")
+add_subdirectory(src/gsl)
+
 message(STATUS "[klib]")
 add_subdirectory(src/klib)
 

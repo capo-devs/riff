@@ -1,19 +1,15 @@
 #pragma once
 #include <capo/source.hpp>
-#include <klib/base_types.hpp>
 #include <klib/c_string.hpp>
+#include <types/event.hpp>
 #include <types/repeat.hpp>
 #include <types/track.hpp>
+#include <gsl/pointers>
 
 namespace riff {
 class Player {
   public:
-	struct IMediator : klib::Polymorphic {
-		virtual void skip_prev() = 0;
-		virtual void skip_next() = 0;
-	};
-
-	explicit Player(std::unique_ptr<capo::ISource> source);
+	explicit Player(std::unique_ptr<capo::ISource> source, gsl::not_null<Events*> events);
 
 	[[nodiscard]] auto get_volume() const -> int { return int(m_source->get_gain() * 100.0f); }
 	void set_volume(int const volume) { m_source->set_gain(float(volume) * 0.01f); }
@@ -36,16 +32,17 @@ class Player {
 	void play() { m_source->play(); }
 	void pause() { m_source->stop(); }
 
-	void update(IMediator& mediator);
+	void update();
 
   private:
 	static constexpr std::string_view blank_title_v{"[none]"};
 
-	void buttons(IMediator& mediator);
+	void buttons();
 	void sliders();
 	void seekbar();
 
 	std::unique_ptr<capo::ISource> m_source{};
+	gsl::not_null<Events*> m_events;
 
 	klib::CString m_title{blank_title_v.data()};
 	klib::CString m_duration_str{};

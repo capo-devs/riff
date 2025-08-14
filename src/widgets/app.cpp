@@ -40,6 +40,7 @@ void App::pre_init() {
 	m_config.load_or_create();
 	create_engine();
 	create_player();
+	m_tracklist.emplace(&m_events);
 
 	m_save_playlist.path.set_text("playlist.m3u");
 }
@@ -71,6 +72,8 @@ void App::post_init() {
 	auto& style = ImGui::GetStyle();
 	style.FrameRounding = style.PopupRounding = style.TabRounding = style.ScrollbarRounding = style.ChildRounding =
 		rounding_v;
+
+	bind_events();
 }
 
 void App::update() {
@@ -81,17 +84,49 @@ void App::update() {
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 	if (ImGui::Begin("main", nullptr, flags_v)) {
 		if (m_playing && m_player->at_end()) { advance(); }
-		m_player->update(*this);
+		m_player->update();
 		m_playing = m_player->is_playing();
 
 		ImGui::Separator();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
-		m_tracklist.update(*this);
+		m_tracklist->update();
 	}
 	if (m_save_playlist.update()) { save_playlist(m_save_playlist.path.as_view()); }
 	ImGui::End();
 
 	update_config();
+}
+
+void App::create_engine() {
+	m_engine = capo::create_engine();
+	if (!m_engine) { throw std::runtime_error{"Failed to create Audio Engine"}; }
+}
+
+void App::create_player() {
+	auto source = m_engine->create_source();
+	if (!source) { throw std::runtime_error{"Failed to create Audio Source"}; }
+
+	m_player.emplace(std::move(source), &m_events);
+	m_player->set_volume(m_config.get_volume());
+	m_player->set_balance(m_config.get_balance());
+	m_player->set_repeat(m_config.get_repeat());
+}
+
+void App::bind_events() {
+	m_events.save.bind([] { ImGui::OpenPopup(SavePlaylist::label_v.c_str()); });
+	m_events.unload_active.bind([this] { unload_active(); });
+	m_events.play_track.bind([this](Track* track) {
+		if (!play_track(*track)) { m_tracklist->reset_active(); }
+	});
+	m_events.skip_prev.bind([this] { skip_prev(); });
+	m_events.skip_next.bind([this] { skip_next(); });
+}
+
+void App::update_config() {
+	m_config.set_volume(m_player->get_volume());
+	m_config.set_balance(m_player->get_balance());
+	m_config.set_repeat(m_player->get_repeat());
+	m_config.update();
 }
 
 auto App::play_track(Track& track) -> bool {
@@ -114,42 +149,18 @@ void App::skip_prev() {
 		m_player->set_cursor(0s);
 		return;
 	}
-	if (!cycle([this] { return m_tracklist.cycle_prev(); })) { return; }
+	if (!cycle([this] { return m_tracklist->cycle_prev(); })) { return; }
 	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
 void App::skip_next() {
 	auto const is_playing = m_player->is_playing();
-	cycle([this] { return m_tracklist.cycle_next(); });
+	cycle([this] { return m_tracklist->cycle_next(); });
 	if (is_playing && !m_player->is_playing()) { m_player->play(); }
 }
 
-void App::on_save() { ImGui::OpenPopup(SavePlaylist::label_v.c_str()); }
-
-void App::create_engine() {
-	m_engine = capo::create_engine();
-	if (!m_engine) { throw std::runtime_error{"Failed to create Audio Engine"}; }
-}
-
-void App::create_player() {
-	auto source = m_engine->create_source();
-	if (!source) { throw std::runtime_error{"Failed to create Audio Source"}; }
-
-	m_player.emplace(std::move(source));
-	m_player->set_volume(m_config.get_volume());
-	m_player->set_balance(m_config.get_balance());
-	m_player->set_repeat(m_config.get_repeat());
-}
-
-void App::update_config() {
-	m_config.set_volume(m_player->get_volume());
-	m_config.set_balance(m_player->get_balance());
-	m_config.set_repeat(m_player->get_repeat());
-	m_config.update();
-}
-
 void App::save_playlist(std::string_view const path) {
-	if (m_tracklist.save_playlist(path)) {
+	if (m_tracklist->save_playlist(path)) {
 		log.info("playlist saved to: {}", path);
 		return;
 	}
@@ -159,7 +170,7 @@ void App::save_playlist(std::string_view const path) {
 
 template <typename F>
 auto App::cycle(F get_track) -> bool {
-	return cycle([this] { return m_tracklist.has_playable_track(); }, get_track);
+	return cycle([this] { return m_tracklist->has_playable_track(); }, get_track);
 }
 
 template <typename Pred, typename F>
@@ -174,10 +185,10 @@ auto App::cycle(Pred pred, F get_track) -> bool {
 
 void App::advance() {
 	auto const pred = [this] {
-		return (m_player->get_repeat() == Repeat::All || m_tracklist.has_next_track()) &&
-			   m_tracklist.has_playable_track();
+		return (m_player->get_repeat() == Repeat::All || m_tracklist->has_next_track()) &&
+			   m_tracklist->has_playable_track();
 	};
-	if (!cycle(pred, [this] { return m_tracklist.cycle_next(); })) { return; }
+	if (!cycle(pred, [this] { return m_tracklist->cycle_next(); })) { return; }
 	m_player->play();
 }
 
@@ -188,9 +199,9 @@ auto App::load_track(Track& track) -> bool {
 }
 
 void App::on_drop(std::span<char const* const> paths) {
-	auto const was_empty = m_tracklist.is_empty();
+	auto const was_empty = m_tracklist->is_empty();
 	for (auto const* path : paths) {
-		if (!m_tracklist.push(path)) {
+		if (!m_tracklist->push(path)) {
 			log.info("skipping non-music file: {}", path);
 			return;
 		}
@@ -199,9 +210,31 @@ void App::on_drop(std::span<char const* const> paths) {
 	advance();
 }
 
+void App::on_key(int const key, int const action, int const mods) {
+	//
+	if (action == GLFW_PRESS) {
+		if (mods == 0) {
+			switch (key) {
+			case GLFW_KEY_SPACE:
+				if (m_playing) {
+					m_player->pause();
+					m_playing = false;
+				} else {
+					m_player->play();
+					m_playing = m_player->is_playing();
+				}
+				break;
+			}
+		}
+	}
+}
+
 void App::install_callbacks(GLFWwindow* window) {
 	glfwSetDropCallback(window, [](GLFWwindow* window, int count, char const** paths) {
 		self(window).on_drop({paths, std::size_t(count)});
+	});
+	glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int /*scancode*/, int action, int mods) {
+		self(window).on_key(key, action, mods);
 	});
 }
 

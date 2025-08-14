@@ -11,7 +11,7 @@ struct Params {
 	std::string_view config_path{"riff.conf"};
 };
 
-class App : public gvdi::App, public Tracklist::IMediator, public Player::IMediator {
+class App : public gvdi::App {
   public:
 	explicit App(Params const& params) : m_params(params) {}
 
@@ -28,19 +28,18 @@ class App : public gvdi::App, public Tracklist::IMediator, public Player::IMedia
 	auto create_window() -> GLFWwindow* final;
 	void post_init() final;
 	void update() final;
-
-	auto play_track(Track& track) -> bool final;
-	void unload_active() final;
-
-	void skip_prev() final;
-	void skip_next() final;
-	void on_save() final;
-
 	void create_engine();
 	void create_player();
+	void bind_events();
 
 	void on_drop(std::span<char const* const> paths);
+	void on_key(int key, int action, int mods);
 	void update_config();
+
+	auto play_track(Track& track) -> bool;
+	void unload_active();
+	void skip_prev();
+	void skip_next();
 
 	void save_playlist(std::string_view path);
 
@@ -57,10 +56,11 @@ class App : public gvdi::App, public Tracklist::IMediator, public Player::IMedia
 
 	Params m_params{};
 	Config m_config{};
+	Events m_events{};
 	std::unique_ptr<capo::IEngine> m_engine{};
 	std::optional<Player> m_player{};
+	std::optional<Tracklist> m_tracklist{};
 
-	Tracklist m_tracklist{};
 	bool m_playing{};
 	SavePlaylist m_save_playlist{};
 };

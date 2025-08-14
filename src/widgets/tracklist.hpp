@@ -1,18 +1,16 @@
 #pragma once
 #include <klib/base_types.hpp>
 #include <klib/c_string.hpp>
+#include <types/event.hpp>
 #include <types/track.hpp>
 #include <cstdint>
+#include <gsl/pointers>
 #include <list>
 
 namespace riff {
 class Tracklist : public klib::Pinned {
   public:
-	struct IMediator : klib::Polymorphic {
-		virtual auto play_track(Track& track) -> bool = 0;
-		virtual void unload_active() = 0;
-		virtual void on_save() = 0;
-	};
+	explicit Tracklist(gsl::not_null<Events*> events) : m_events(events) {}
 
 	[[nodiscard]] auto is_empty() const -> bool { return m_tracks.empty(); }
 	[[nodiscard]] auto has_playable_track() const -> bool;
@@ -26,7 +24,9 @@ class Tracklist : public klib::Pinned {
 	auto cycle_next() -> Track*;
 	auto cycle_prev() -> Track*;
 
-	void update(IMediator& mediator);
+	void reset_active() { m_active = m_tracks.end(); }
+
+	void update();
 
   private:
 	using It = std::list<Track>::iterator;
@@ -38,11 +38,13 @@ class Tracklist : public klib::Pinned {
 	auto append_playlist(std::string_view path) -> bool;
 	void append_track(std::string_view path);
 
-	void remove_track(IMediator& mediator);
+	void remove_track();
 	void move_track_up();
 	void move_track_down();
-	void track_list(IMediator& mediator);
+	void track_list();
 	void swap_with_cursor(It const& it);
+
+	gsl::not_null<Events*> m_events;
 
 	std::list<Track> m_tracks{};
 	std::uint64_t m_prev_id{};

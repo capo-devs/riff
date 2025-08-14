@@ -24,6 +24,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   capo::capo
   klib::klib
   icons::kenny
+  ms::gsl
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE

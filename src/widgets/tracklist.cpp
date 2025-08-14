@@ -5,6 +5,7 @@
 #include <widgets/tracklist.hpp>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <filesystem>
 #include <utility>
 
@@ -79,12 +80,12 @@ auto Tracklist::cycle_prev() -> Track* {
 	return &*m_active;
 }
 
-void Tracklist::update(IMediator& mediator) {
+void Tracklist::update() {
 	ImGui::TextUnformatted(ICON_KI_LIST);
 	auto const none_selected = m_cursor == m_tracks.end();
 	if (none_selected) { ImGui::BeginDisabled(); }
 	ImGui::SameLine();
-	remove_track(mediator);
+	remove_track();
 	ImGui::SameLine();
 	move_track_up();
 	ImGui::SameLine();
@@ -93,9 +94,9 @@ void Tracklist::update(IMediator& mediator) {
 	auto const is_empty = m_tracks.empty();
 	if (is_empty) { ImGui::BeginDisabled(); }
 	ImGui::SameLine();
-	if (ImGui::Button(ICON_KI_SAVE)) { mediator.on_save(); }
+	if (ImGui::Button(ICON_KI_SAVE)) { m_events->save(); }
 	if (is_empty) { ImGui::EndDisabled(); }
-	track_list(mediator);
+	track_list();
 }
 
 auto Tracklist::is_inactive() const -> bool { return m_active == m_tracks.end(); }
@@ -119,10 +120,10 @@ void Tracklist::append_track(std::string_view const path) {
 	m_tracks.push_back(to_track(fs_path, m_prev_id));
 }
 
-void Tracklist::remove_track(IMediator& mediator) {
+void Tracklist::remove_track() {
 	if (ImGui::Button(ICON_KI_TIMES)) {
 		if (m_active == m_cursor) {
-			mediator.unload_active();
+			m_events->unload_active();
 			m_active = m_tracks.end();
 		}
 		m_cursor = m_tracks.erase(m_cursor);
@@ -143,7 +144,7 @@ void Tracklist::move_track_down() {
 	if (on_last_track) { ImGui::EndDisabled(); }
 }
 
-void Tracklist::track_list(IMediator& mediator) {
+void Tracklist::track_list() {
 	auto switch_track = false;
 	ImGui::BeginChild("Tracklist", {}, ImGuiChildFlags_Borders);
 	for (auto it = m_tracks.begin(); it != m_tracks.end(); ++it) {
@@ -169,8 +170,9 @@ void Tracklist::track_list(IMediator& mediator) {
 	ImGui::EndChild();
 
 	if (switch_track) {
-		auto& track = *m_cursor;
-		m_active = mediator.play_track(track) ? m_cursor : m_tracks.end();
+		assert(m_cursor != m_tracks.end());
+		m_active = m_cursor;
+		m_events->play_track(&*m_active);
 	}
 }
 
