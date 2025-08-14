@@ -11,7 +11,7 @@ class Player {
   public:
 	explicit Player(std::unique_ptr<capo::ISource> source, gsl::not_null<Events*> events);
 
-	[[nodiscard]] auto get_volume() const -> int { return int(m_source->get_gain() * 100.0f); }
+	[[nodiscard]] auto get_volume() const -> int;
 	void set_volume(int const volume) { m_source->set_gain(float(volume) * 0.01f); }
 
 	[[nodiscard]] auto get_balance() const -> float { return m_source->get_pan(); }
@@ -21,7 +21,7 @@ class Player {
 	void set_repeat(Repeat repeat);
 
 	[[nodiscard]] auto get_cursor() const -> Time { return m_source->get_cursor(); }
-	void set_cursor(Time cursor) { m_source->set_cursor(cursor); }
+	void set_cursor(Time cursor);
 
 	[[nodiscard]] auto is_track_loaded() const -> bool { return m_source->is_bound(); }
 	auto load_track(Track& track) -> bool;

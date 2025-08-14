@@ -33,6 +33,26 @@ struct ImFontLoader {
   private:
 	bool m_merge{false};
 };
+
+[[nodiscard]] constexpr auto to_seek_length(input::Modifier const mods) -> Time {
+	using Mod = input::Modifier;
+	switch (mods) {
+	case Mod::Shift: return 3s;
+	case Mod::Alt: return 10s;
+	case Mod::Control: return 30s;
+	default: return 5s;
+	}
+}
+
+[[nodiscard]] constexpr auto to_volume_delta(input::Modifier const mods) -> int {
+	using Mod = input::Modifier;
+	switch (mods) {
+	case Mod::Shift: return 2;
+	case Mod::Alt: return 10;
+	case Mod::Control: return 20;
+	default: return 5;
+	}
+}
 } // namespace
 
 void App::pre_init() {
@@ -120,9 +140,18 @@ void App::bind_events() {
 	m_events.play_track.bind([this](Track* track) {
 		if (!play_track(*track)) { m_tracklist->reset_active(); }
 	});
-	m_events.skip_prev.bind([this] { skip_prev(); });
-	m_events.skip_next.bind([this] { skip_next(); });
+	m_events.skip.bind([this](Polarity const polarity) {
+		switch (polarity) {
+		case Polarity::Negative: skip_prev(); break;
+		case Polarity::Positive: skip_next(); break;
+		default: break;
+		}
+	});
 	m_events.toggle_playback.bind([this] { toggle_playback(); });
+	m_events.seek.bind([this](Polarity const polarity, input::Modifier const mods) { seek(polarity, mods); });
+	m_events.toggle_repeat.bind([this] { toggle_repeat(); });
+	m_events.adjust_volume.bind(
+		[this](Polarity const polarity, input::Modifier const mods) { adjust_volume(polarity, mods); });
 }
 
 void App::update_config() {
@@ -169,6 +198,24 @@ void App::toggle_playback() {
 		m_player->play();
 	}
 	m_was_playing = m_player->is_playing();
+}
+
+void App::seek(Polarity const polarity, input::Modifier const mods) {
+	auto const sign = to_f32(polarity);
+	auto const length = to_seek_length(mods);
+	m_player->set_cursor(m_player->get_cursor() + sign * length);
+}
+
+void App::toggle_repeat() {
+	auto const current = std::to_underlying(m_player->get_repeat());
+	auto const next = Repeat((current + 1) % std::to_underlying(Repeat::COUNT_));
+	m_player->set_repeat(next);
+}
+
+void App::adjust_volume(Polarity const polarity, input::Modifier const mods) {
+	auto const sign = to_int(polarity);
+	auto const delta = sign * to_volume_delta(mods);
+	m_player->set_volume(m_player->get_volume() + delta);
 }
 
 void App::save_playlist(std::string_view const path) {

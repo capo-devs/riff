@@ -6,6 +6,7 @@
 #include <widgets/imcpp.hpp>
 #include <widgets/player.hpp>
 #include <cassert>
+#include <cmath>
 #include <utility>
 
 namespace riff {
@@ -26,9 +27,19 @@ Player::Player(std::unique_ptr<capo::ISource> source, gsl::not_null<Events*> eve
 	m_duration_str = duration_0_str.c_str();
 }
 
+auto Player::get_volume() const -> int {
+	auto const ret = std::roundf(m_source->get_gain() * 100.0f);
+	return int(ret);
+}
+
 void Player::set_repeat(Repeat const repeat) {
 	m_repeat = repeat;
 	m_source->set_looping(m_repeat == Repeat::One);
+}
+
+void Player::set_cursor(Time cursor) {
+	if (cursor < 0s) { cursor = 0s; }
+	m_source->set_cursor(cursor);
 }
 
 auto Player::load_track(Track& track) -> bool {
@@ -100,8 +111,8 @@ void Player::buttons() {
 
 	switch (action) {
 	case Action::None: break;
-	case Action::Previous: m_events->skip_prev(); break;
-	case Action::Next: m_events->skip_next(); break;
+	case Action::Previous: m_events->skip(Polarity::Negative); break;
+	case Action::Next: m_events->skip(Polarity::Positive); break;
 	}
 }
 
@@ -126,7 +137,7 @@ void Player::sliders() {
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * volume_icon_size.y));
 	ImGui::SetNextItemWidth(volume_width_v);
-	auto volume = int(m_source->get_gain() * 100.0f);
+	auto volume = get_volume();
 	if (ImGui::SliderInt("##volume", &volume, 0, 100, "%d", ImGuiSliderFlags_ClampZeroRange)) {
 		m_source->set_gain(float(volume) * 0.01f);
 	}

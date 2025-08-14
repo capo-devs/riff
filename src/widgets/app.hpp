@@ -41,6 +41,9 @@ class App : public gvdi::App {
 	void skip_prev();
 	void skip_next();
 	void toggle_playback();
+	void seek(Polarity polarity, input::Modifier mods);
+	void toggle_repeat();
+	void adjust_volume(Polarity polarity, input::Modifier mods);
 
 	void save_playlist(std::string_view path);
 
