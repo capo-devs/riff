@@ -1,10 +1,10 @@
 #pragma once
 #include <capo/engine.hpp>
-#include <config.hpp>
+#include <core/config.hpp>
 #include <gvdi/app.hpp>
-#include <imcpp.hpp>
-#include <player.hpp>
-#include <tracklist.hpp>
+#include <widgets/imcpp.hpp>
+#include <widgets/player.hpp>
+#include <widgets/tracklist.hpp>
 
 namespace riff {
 struct Params {

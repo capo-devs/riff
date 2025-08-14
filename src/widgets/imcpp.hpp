@@ -1,6 +1,7 @@
 #pragma once
 #include <imgui.h>
 #include <klib/c_string.hpp>
+#include <concepts>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -25,4 +26,11 @@ class InputText {
 };
 
 [[nodiscard]] auto begin_modal(klib::CString label) -> bool;
+
+template <std::same_as<float>... Ts>
+void align_right(float const width, Ts const... widths) {
+	auto const spacing = float(sizeof...(widths)) * ImGui::GetStyle().ItemSpacing.x;
+	auto const total_width = width + (spacing + ... + widths);
+	ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - total_width);
+}
 } // namespace riff::imcpp

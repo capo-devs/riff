@@ -3,8 +3,8 @@
 #include <imgui_internal.h>
 #include <capo/format.hpp>
 #include <klib/enum_array.hpp>
-#include <player.hpp>
-#include <util.hpp>
+#include <widgets/imcpp.hpp>
+#include <widgets/player.hpp>
 #include <cassert>
 #include <utility>
 
@@ -110,7 +110,7 @@ void Player::sliders() {
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 50.0f);
 
 	auto const balance_icon_size = ImGui::CalcTextSize(ICON_KI_SORT_HORIZONTAL);
-	util::align_right(balance_icon_size.x, balance_width_v);
+	imcpp::align_right(balance_icon_size.x, balance_width_v);
 	ImGui::TextUnformatted(ICON_KI_SORT_HORIZONTAL);
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * balance_icon_size.y));
@@ -120,7 +120,7 @@ void Player::sliders() {
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (0.2f * balance_icon_size.y));
 
 	auto const volume_icon_size = ImGui::CalcTextSize(ICON_KI_SOUND_ON);
-	util::align_right(volume_icon_size.x, volume_width_v);
+	imcpp::align_right(volume_icon_size.x, volume_width_v);
 	ImGui::TextUnformatted(ICON_KI_SOUND_ON);
 	ImGui::SameLine();
 	ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (0.2f * volume_icon_size.y));
@@ -137,7 +137,7 @@ void Player::seekbar() {
 	ImGui::TextUnformatted(duration_0_str.c_str());
 	auto const duration_width = ImGui::CalcTextSize(m_duration_str.c_str()).x;
 	ImGui::SameLine();
-	util::align_right(duration_width);
+	imcpp::align_right(duration_width);
 	ImGui::TextUnformatted(m_duration_str.c_str());
 
 	auto fduration = std::max(m_source->get_duration().count(), 0.0f);

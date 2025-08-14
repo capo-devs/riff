@@ -2,8 +2,8 @@
 #include <capo/source.hpp>
 #include <klib/base_types.hpp>
 #include <klib/c_string.hpp>
-#include <repeat.hpp>
-#include <track.hpp>
+#include <types/repeat.hpp>
+#include <types/track.hpp>
 
 namespace riff {
 class Player {

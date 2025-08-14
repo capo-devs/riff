@@ -1,7 +1,7 @@
 #pragma once
+#include <core/time.hpp>
 #include <klib/c_string.hpp>
-#include <repeat.hpp>
-#include <time.hpp>
+#include <types/repeat.hpp>
 
 namespace riff {
 class Config {

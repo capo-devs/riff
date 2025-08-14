@@ -1,8 +1,8 @@
 #include <IconsKenney.h>
-#include <app.hpp>
+#include <bin/embedded.hpp>
 #include <build_version.hpp>
-#include <embedded.hpp>
-#include <log.hpp>
+#include <core/log.hpp>
+#include <widgets/app.hpp>
 #include <array>
 #include <utility>
 

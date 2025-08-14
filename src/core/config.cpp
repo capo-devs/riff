@@ -1,7 +1,7 @@
-#include <config.hpp>
-#include <ini.hpp>
+#include <core/config.hpp>
+#include <core/ini.hpp>
+#include <core/log.hpp>
 #include <klib/enum_array.hpp>
-#include <log.hpp>
 #include <cmath>
 #include <format>
 

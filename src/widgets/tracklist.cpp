@@ -1,8 +1,8 @@
 #include <IconsKenney.h>
 #include <imgui.h>
-#include <playlist.hpp>
-#include <tracklist.hpp>
-#include <util.hpp>
+#include <types/playlist.hpp>
+#include <widgets/imcpp.hpp>
+#include <widgets/tracklist.hpp>
 #include <algorithm>
 #include <array>
 #include <filesystem>
@@ -162,7 +162,7 @@ void Tracklist::track_list(IMediator& mediator) {
 		if (track.status == Track::Status::Ok) {
 			ImGui::SameLine();
 			auto const width = ImGui::CalcTextSize(track.duration_label.c_str()).x;
-			util::align_right(width);
+			imcpp::align_right(width);
 			ImGui::TextUnformatted(track.duration_label.c_str());
 		}
 	}

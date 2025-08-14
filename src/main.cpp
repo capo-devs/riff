@@ -1,6 +1,6 @@
-#include <app.hpp>
 #include <build_version.hpp>
 #include <klib/args/parse.hpp>
+#include <widgets/app.hpp>
 #include <array>
 #include <print>
 
