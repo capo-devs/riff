@@ -16,6 +16,6 @@ add_subdirectory(src/gvdi)
 message(STATUS "[icons-kenny]")
 add_subdirectory(src/icons_kenny)
 
-if(RIFF_BUILD_EMBEDDER)
-  add_subdirectory(src/embedder)
+if(RIFF_BUILD_BIN2CPP)
+  add_subdirectory(src/bin2cpp)
 endif()

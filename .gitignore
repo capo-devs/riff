@@ -14,9 +14,12 @@ compile_commands.json
 **.mp3
 **.ogg
 **.flac
+**.m3u*
 
 # Dear ImGui
 imgui.ini
 
 riff.conf
 notes.txt
+
+/fonts

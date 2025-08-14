@@ -32,7 +32,7 @@ void Player::set_repeat(Repeat const repeat) {
 
 auto Player::load_track(Track& track) -> bool {
 	auto const was_playing = is_playing();
-	if (!m_source->open_stream(track.path.c_str())) {
+	if (!m_source->open_file_stream(track.path.c_str())) {
 		track.status = Track::Status::Error;
 		return false;
 	}

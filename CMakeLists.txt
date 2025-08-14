@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(riff VERSION "0.1.1")
+project(riff VERSION "0.1.2")
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_DEBUG_POSTFIX "-d")
 
 option(RIFF_MA_DEBUG_OUTPUT "Enable miniaudio debug output" ${PROJECT_IS_TOP_LEVEL})
-option(RIFF_BUILD_EMBEDDER "Build embedder (binary => C++ tool)" ${PROJECT_IS_TOP_LEVEL})
+option(RIFF_BUILD_BIN2CPP "Build bin2cpp tool" ${PROJECT_IS_TOP_LEVEL})
 
 add_subdirectory(ext)
 
