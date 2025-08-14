@@ -41,6 +41,7 @@ void App::pre_init() {
 	create_engine();
 	create_player();
 	m_tracklist.emplace(&m_events);
+	m_controller.emplace(&m_events);
 
 	m_save_playlist.path.set_text("playlist.m3u");
 }
@@ -83,9 +84,8 @@ void App::update() {
 	static constexpr auto flags_v =
 		ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 	if (ImGui::Begin("main", nullptr, flags_v)) {
-		if (m_playing && m_player->at_end()) { advance(); }
+		if (m_was_playing && m_player->at_end()) { advance(); }
 		m_player->update();
-		m_playing = m_player->is_playing();
 
 		ImGui::Separator();
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.0f);
@@ -93,6 +93,8 @@ void App::update() {
 	}
 	if (m_save_playlist.update()) { save_playlist(m_save_playlist.path.as_view()); }
 	ImGui::End();
+
+	m_was_playing = m_player->is_playing();
 
 	update_config();
 }
@@ -120,6 +122,7 @@ void App::bind_events() {
 	});
 	m_events.skip_prev.bind([this] { skip_prev(); });
 	m_events.skip_next.bind([this] { skip_next(); });
+	m_events.toggle_playback.bind([this] { toggle_playback(); });
 }
 
 void App::update_config() {
@@ -133,14 +136,14 @@ auto App::play_track(Track& track) -> bool {
 	if (!load_track(track)) { return false; }
 	if (!m_player->is_playing()) {
 		m_player->play();
-		m_playing = m_player->is_playing();
+		m_was_playing = m_player->is_playing();
 	}
 	return true;
 }
 
 void App::unload_active() {
 	m_player->unload_track();
-	m_playing = false;
+	m_was_playing = false;
 }
 
 void App::skip_prev() {
@@ -157,6 +160,15 @@ void App::skip_next() {
 	auto const is_playing = m_player->is_playing();
 	cycle([this] { return m_tracklist->cycle_next(); });
 	if (is_playing && !m_player->is_playing()) { m_player->play(); }
+}
+
+void App::toggle_playback() {
+	if (m_player->is_playing()) {
+		m_player->pause();
+	} else {
+		m_player->play();
+	}
+	m_was_playing = m_player->is_playing();
 }
 
 void App::save_playlist(std::string_view const path) {
@@ -210,31 +222,12 @@ void App::on_drop(std::span<char const* const> paths) {
 	advance();
 }
 
-void App::on_key(int const key, int const action, int const mods) {
-	//
-	if (action == GLFW_PRESS) {
-		if (mods == 0) {
-			switch (key) {
-			case GLFW_KEY_SPACE:
-				if (m_playing) {
-					m_player->pause();
-					m_playing = false;
-				} else {
-					m_player->play();
-					m_playing = m_player->is_playing();
-				}
-				break;
-			}
-		}
-	}
-}
-
 void App::install_callbacks(GLFWwindow* window) {
 	glfwSetDropCallback(window, [](GLFWwindow* window, int count, char const** paths) {
 		self(window).on_drop({paths, std::size_t(count)});
 	});
 	glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int /*scancode*/, int action, int mods) {
-		self(window).on_key(key, action, mods);
+		self(window).m_controller->on_key(key, action, mods);
 	});
 }
 

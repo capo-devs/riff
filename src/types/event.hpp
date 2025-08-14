@@ -9,6 +9,7 @@ struct UnloadActive : Signal<> {};
 struct PlayTrack : Signal<Track*> {};
 struct SkipPrev : Signal<> {};
 struct SkipNext : Signal<> {};
+struct TogglePlayback : Signal<> {};
 } // namespace event
 
 struct Events {
@@ -17,5 +18,6 @@ struct Events {
 	event::Save save{};
 	event::UnloadActive unload_active{};
 	event::PlayTrack play_track{};
+	event::TogglePlayback toggle_playback{};
 };
 } // namespace riff

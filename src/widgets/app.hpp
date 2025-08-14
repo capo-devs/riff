@@ -2,6 +2,7 @@
 #include <capo/engine.hpp>
 #include <core/config.hpp>
 #include <gvdi/app.hpp>
+#include <input/controller.hpp>
 #include <widgets/imcpp.hpp>
 #include <widgets/player.hpp>
 #include <widgets/tracklist.hpp>
@@ -33,13 +34,13 @@ class App : public gvdi::App {
 	void bind_events();
 
 	void on_drop(std::span<char const* const> paths);
-	void on_key(int key, int action, int mods);
 	void update_config();
 
 	auto play_track(Track& track) -> bool;
 	void unload_active();
 	void skip_prev();
 	void skip_next();
+	void toggle_playback();
 
 	void save_playlist(std::string_view path);
 
@@ -60,8 +61,9 @@ class App : public gvdi::App {
 	std::unique_ptr<capo::IEngine> m_engine{};
 	std::optional<Player> m_player{};
 	std::optional<Tracklist> m_tracklist{};
+	std::optional<input::Controller> m_controller{};
 
-	bool m_playing{};
+	bool m_was_playing{};
 	SavePlaylist m_save_playlist{};
 };
 } // namespace riff
