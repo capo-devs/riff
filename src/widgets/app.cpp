@@ -81,12 +81,12 @@ void App::post_init() {
 	auto font_loader = ImFontLoader{};
 	font_loader.io.Fonts->ClearFonts();
 	if (!font_loader.load(rounded_elegance_bytes(), 16.0f)) {
-		log.warn("Failed to load RoundedElegance.ttf");
+		log.warn("failed to load RoundedElegance.ttf");
 		font_loader.load_default();
 	}
 	static constexpr auto glyph_ranges_v = std::array<ImWchar, 3>{ICON_MIN_KI, ICON_MAX_KI, 0};
 	if (!font_loader.load(kenny_icon_bytes(), 18.0f, {0.0f, 3.0f}, glyph_ranges_v.data())) {
-		log.error("Failed to load KennyIcons.ttf");
+		log.error("failed to load KennyIcons.ttf");
 	}
 
 	static constexpr auto rounding_v = 5.0f;
@@ -95,6 +95,10 @@ void App::post_init() {
 		rounding_v;
 
 	bind_events();
+
+	if (auto const autosave_path = m_config.get_autosave_path(); !autosave_path.empty()) {
+		m_tracklist->push(autosave_path);
+	}
 }
 
 void App::update() {
@@ -117,6 +121,17 @@ void App::update() {
 	m_was_playing = m_player->is_playing();
 
 	update_config();
+}
+
+void App::post_run() {
+	if (!m_config.get_autosave() || m_tracklist->is_empty()) { return; }
+	auto const autosave_path = m_config.get_autosave_path();
+	if (autosave_path.empty()) { return; }
+	if (m_tracklist->save_playlist(autosave_path)) {
+		log.info("playlist autosaved to: {}", autosave_path);
+	} else {
+		log.warn("failed to autosave playlist: {}", autosave_path);
+	}
 }
 
 void App::create_engine() {

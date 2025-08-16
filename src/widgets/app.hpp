@@ -29,6 +29,8 @@ class App : public gvdi::App {
 	auto create_window() -> GLFWwindow* final;
 	void post_init() final;
 	void update() final;
+	void post_run() final;
+
 	void create_engine();
 	void create_player();
 	void bind_events();

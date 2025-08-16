@@ -20,6 +20,13 @@ class Ini {
 		return true;
 	}
 
+	auto assign_to(bool& out, std::string_view const key) const -> bool {
+		auto const value = get_value(key);
+		if (value.empty()) { return false; }
+		out = value == "true" || value == "TRUE" || value == "True";
+		return true;
+	}
+
 	template <klib::NumberT Type>
 	auto assign_to(Type& out, std::string_view const key) const -> bool {
 		auto const value = get_value(key);

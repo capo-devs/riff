@@ -29,6 +29,12 @@ class Config {
 	[[nodiscard]] auto get_repeat() const -> Repeat { return m_repeat; }
 	void set_repeat(Repeat repeat);
 
+	[[nodiscard]] auto get_autosave() const -> bool { return m_autosave; }
+	void set_autosave(bool autosave);
+
+	[[nodiscard]] auto get_autosave_path() const -> std::string_view { return m_autosave_path; }
+	void set_autosave_path(std::string_view path);
+
 	void update();
 
 	std::string path{"riff.conf"};
@@ -37,9 +43,14 @@ class Config {
 	auto load_silent() -> bool;
 	auto save_silent() const -> bool;
 
+	template <typename T, typename U>
+	void set_if_different(T& out, U&& value);
+
 	int m_volume{100};
 	float m_balance{0.0f};
 	Repeat m_repeat{Repeat::None};
+	bool m_autosave{true};
+	std::string m_autosave_path{"riff.m3u"};
 
 	mutable bool m_dirty{};
 	mutable Clock::time_point m_last_save{};

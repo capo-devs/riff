@@ -17,6 +17,15 @@ constexpr void from_str(std::string_view const in, Repeat& out) {
 		}
 	}
 }
+
+template <typename T, typename U, float Epsilon = 0.1f>
+constexpr auto compare_eq(T const& a, U&& b) { // NOLINT(cppcoreguidelines-missing-std-forward)
+	if constexpr (std::floating_point<T>) {
+		return std::abs(a - T(b)) < T(Epsilon);
+	} else {
+		return a == b;
+	}
+}
 } // namespace
 
 auto Config::load() -> bool {
@@ -52,23 +61,15 @@ auto Config::load_or_create() -> bool {
 	return false;
 }
 
-void Config::set_volume(int const volume) {
-	if (volume == m_volume) { return; }
-	m_volume = volume;
-	m_dirty = true;
-}
+void Config::set_volume(int const volume) { set_if_different(m_volume, volume); }
 
-void Config::set_balance(float const balance) {
-	if (std::abs(balance - m_balance) < 0.01f) { return; }
-	m_balance = balance;
-	m_dirty = true;
-}
+void Config::set_balance(float const balance) { set_if_different(m_balance, balance); }
 
-void Config::set_repeat(Repeat const repeat) {
-	if (repeat == m_repeat) { return; }
-	m_repeat = repeat;
-	m_dirty = true;
-}
+void Config::set_repeat(Repeat const repeat) { set_if_different(m_repeat, repeat); }
+
+void Config::set_autosave(bool const autosave) { set_if_different(m_autosave, autosave); }
+
+void Config::set_autosave_path(std::string_view const path) { set_if_different(m_autosave_path, path); }
 
 void Config::update() {
 	if (!m_dirty) { return; }
@@ -84,6 +85,8 @@ auto Config::load_silent() -> bool {
 	ini.assign_to(m_balance, "balance");
 	auto repeat_ = std::string{};
 	if (ini.assign_to(repeat_, "repeat")) { from_str(repeat_, m_repeat); }
+	ini.assign_to(m_autosave, "autosave");
+	ini.assign_to(m_autosave_path, "autosave_path");
 	m_dirty = false;
 	return true;
 }
@@ -93,9 +96,18 @@ auto Config::save_silent() const -> bool {
 	ini.set_value("volume", std::format("{}", m_volume));
 	ini.set_value("balance", std::format("{:.1f}", m_balance));
 	ini.set_value("repeat", std::string{repeat_str_v[m_repeat]});
+	ini.set_value("autosave", std::format("{}", m_autosave));
+	ini.set_value("autosave_path", m_autosave_path);
 	if (!ini.save(path.c_str())) { return false; }
 	m_dirty = false;
 	m_last_save = Clock::now();
 	return true;
+}
+
+template <typename T, typename U>
+void Config::set_if_different(T& out, U&& value) { // NOLINT(cppcoreguidelines-missing-std-forward)
+	if (compare_eq(out, value)) { return; }
+	out = value;
+	m_dirty = true;
 }
 } // namespace riff
