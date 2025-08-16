@@ -210,6 +210,7 @@ void App::toggle_playback() {
 	if (m_player->is_playing()) {
 		m_player->pause();
 	} else {
+		if (!m_player->is_track_loaded() && m_tracklist->has_next_track()) { skip_next(); }
 		m_player->play();
 	}
 	m_was_playing = m_player->is_playing();
