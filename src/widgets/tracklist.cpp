@@ -37,7 +37,7 @@ auto Tracklist::has_playable_track() const -> bool {
 auto Tracklist::has_next_track() const -> bool {
 	if (m_tracks.empty()) { return false; }
 	if (is_inactive()) { return true; }
-	if (!is_last()) { return true; }
+	if (!is_last(m_active)) { return true; }
 	return false;
 }
 
@@ -65,7 +65,7 @@ auto Tracklist::save_playlist(std::string_view const path) const -> bool {
 
 auto Tracklist::cycle_next() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
-	if (is_inactive() || is_last()) {
+	if (is_inactive() || is_last(m_active)) {
 		m_active = m_tracks.begin();
 	} else {
 		++m_active;
@@ -75,7 +75,7 @@ auto Tracklist::cycle_next() -> Track* {
 
 auto Tracklist::cycle_prev() -> Track* {
 	if (m_tracks.empty()) { return nullptr; }
-	if (is_first()) { m_active = m_tracks.end(); }
+	if (is_first(m_active)) { m_active = m_tracks.end(); }
 	--m_active;
 	return &*m_active;
 }
@@ -101,12 +101,9 @@ void Tracklist::update() {
 
 auto Tracklist::is_inactive() const -> bool { return m_active == m_tracks.end(); }
 
-auto Tracklist::is_first() const -> bool { return m_active == m_tracks.begin(); }
+auto Tracklist::is_first(It const it) const -> bool { return it == m_tracks.begin(); }
 
-auto Tracklist::is_last() const -> bool {
-	assert(!is_inactive());
-	return std::next(m_active) == m_tracks.end();
-}
+auto Tracklist::is_last(It const it) const -> bool { return it != m_tracks.end() && std::next(it) == m_tracks.end(); }
 
 auto Tracklist::append_playlist(std::string_view const path) -> bool {
 	auto playlist = Playlist{};
@@ -131,14 +128,14 @@ void Tracklist::remove_track() {
 }
 
 void Tracklist::move_track_up() {
-	auto const on_first_track = is_first();
+	auto const on_first_track = is_first(m_cursor);
 	if (on_first_track) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_TOP)) { swap_with_cursor(std::prev(m_cursor)); }
 	if (on_first_track) { ImGui::EndDisabled(); }
 }
 
 void Tracklist::move_track_down() {
-	auto const on_last_track = !is_inactive() && is_last();
+	auto const on_last_track = !is_inactive() && is_last(m_cursor);
 	if (on_last_track) { ImGui::BeginDisabled(); }
 	if (ImGui::Button(ICON_KI_ARROW_BOTTOM)) { swap_with_cursor(std::next(m_cursor)); }
 	if (on_last_track) { ImGui::EndDisabled(); }

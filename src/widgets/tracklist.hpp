@@ -32,8 +32,8 @@ class Tracklist : public klib::Pinned {
 	using It = std::list<Track>::iterator;
 
 	[[nodiscard]] auto is_inactive() const -> bool;
-	[[nodiscard]] auto is_first() const -> bool;
-	[[nodiscard]] auto is_last() const -> bool;
+	[[nodiscard]] auto is_first(It it) const -> bool;
+	[[nodiscard]] auto is_last(It it) const -> bool;
 
 	auto append_playlist(std::string_view path) -> bool;
 	void append_track(std::string_view path);
